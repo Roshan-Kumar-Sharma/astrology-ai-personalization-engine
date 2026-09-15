@@ -6,3 +6,8 @@ coverage/
 .env.local
 .DS_Store
 *.tsbuildinfo
+
+# Assignment artifacts. The brief is MyNaksh's document and the submission
+# bundle is a build output - neither belongs in the open-source repo.
+*.docx
+*.zip
