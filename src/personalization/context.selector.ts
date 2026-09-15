@@ -159,7 +159,7 @@ export class ContextSelector {
     // Priority first; cheaper items break ties so the budget stretches further.
     relevant.sort((a, b) => b.score - a.score || a.tokens - b.tokens);
 
-    // --- 6. Budget packing ---------------------------------------------------
+    // --- 7. Budget packing ---------------------------------------------------
     // Greedy by priority, but a single expensive item that does not fit must not
     // block every cheaper item behind it - so packing continues past a miss
     // rather than stopping at the first overflow.

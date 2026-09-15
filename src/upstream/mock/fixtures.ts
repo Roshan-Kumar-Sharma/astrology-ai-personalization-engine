@@ -41,6 +41,19 @@ export const USERS: Record<string, UserProfile> = {
     tonePreference: 'analytical',
     birthDetails: { date: '2000-11-22', place: 'Chennai', timeAccuracy: 'unknown' },
   },
+  /**
+   * Added as a worked example of extending the fixtures. Exercises a fourth
+   * language (Marathi) and an early-phase dasha, contrasting with user_101's
+   * closing-phase chart.
+   */
+  user_104: {
+    id: 'user_104',
+    name: 'Sneha Kulkarni',
+    language: 'mr',
+    subscription: 'premium',
+    tonePreference: 'direct',
+    birthDetails: { date: '1989-06-11', time: '04:22', place: 'Nagpur', timeAccuracy: 'exact' },
+  },
 };
 
 export const KUNDLIS: Record<string, Kundli> = {
@@ -90,6 +103,23 @@ export const KUNDLIS: Record<string, Kundli> = {
       '11': { lord: 'Venus', strength: 'Strong' },
     },
   },
+  // Capricorn lagna: 1st=Capricorn(Saturn), 2nd=Aquarius(Saturn), 5th=Taurus(Venus),
+  // 6th=Gemini(Mercury), 7th=Cancer(Moon), 10th=Libra(Venus), 11th=Scorpio(Mars).
+  // Mercury-Ketu is the 2nd of nine antardashas -> early in a 17-year mahadasha.
+  user_104: {
+    lagna: 'Capricorn',
+    moonSign: 'Virgo',
+    currentDasha: { mahadasha: 'Mercury', antardasha: 'Ketu' },
+    houses: {
+      '1': { lord: 'Saturn', strength: 'Strong' },
+      '2': { lord: 'Saturn', strength: 'Average' },
+      '5': { lord: 'Venus', strength: 'Strong' },
+      '6': { lord: 'Mercury', strength: 'Strong' },
+      '7': { lord: 'Moon', strength: 'Average' },
+      '10': { lord: 'Venus', strength: 'Strong' },
+      '11': { lord: 'Mars', strength: 'Average' },
+    },
+  },
 };
 
 export const HOROSCOPES: Record<string, Horoscope> = {
@@ -110,6 +140,12 @@ export const HOROSCOPES: Record<string, Horoscope> = {
     finance: 'Review subscriptions and recurring costs.',
     health: 'Hydration and screen breaks matter today.',
     relationship: 'An old friend may reconnect.',
+  },
+  user_104: {
+    career: 'A long-running project moves closer to completion.',
+    finance: 'A good week to renegotiate a recurring cost.',
+    health: 'Your stamina responds well to an earlier bedtime.',
+    relationship: 'Someone close appreciates being asked, not assumed.',
   },
 };
 
