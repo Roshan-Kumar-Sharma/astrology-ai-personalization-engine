@@ -33,6 +33,27 @@ curl -s -X POST localhost:3000/personalize \
 
 ---
 
+## Full documentation
+
+This README is the submission summary. The complete handbook — architecture,
+design decisions, domain primer, AI concepts, and a full interview guide — is in
+**[docs/](docs/README.md)**:
+
+| Doc | Covers |
+|---|---|
+| [Overview](docs/01-overview.md) | The problem, why the naive version fails, the mental model |
+| [Request Lifecycle](docs/02-request-lifecycle.md) | All 10 stages traced with real values |
+| [High-Level Design](docs/03-hld.md) | Components, scaling, failure modes |
+| [Low-Level Design](docs/04-lld.md) | Every module and data structure |
+| [Design Decisions](docs/05-design-decisions.md) | 13 decisions with alternatives and honest costs |
+| [Tech Stack](docs/06-tech-stack.md) | Why NestJS over Express/Fastify, why TypeScript |
+| [Astrology Concepts](docs/07-astrology-concepts.md) | The domain from zero, and what we don't model |
+| [AI & LLM Concepts](docs/08-ai-concepts.md) | Grounding, context engineering, why not RAG |
+| [API Reference](docs/09-api-reference.md) | Endpoints, contracts, curl cookbook |
+| [Interview Guide](docs/10-interview-guide.md) | Q&A including the questions designed to find cracks |
+| [Diagrams](docs/architecture.md) | Mermaid: pipeline, layers, decision flow |
+| **[Code Walkthrough](docs/code/README.md)** | **Every file and function explained, in dependency order** |
+
 ## Contents
 
 - [The five decisions that shaped this](#the-five-decisions-that-shaped-this)
