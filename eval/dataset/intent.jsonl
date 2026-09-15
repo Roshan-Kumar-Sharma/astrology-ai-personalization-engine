@@ -1,0 +1,120 @@
+{"id":"car-01","question":"Should I change my job this month?","intent":"career","horizon":"month"}
+{"id":"car-02","question":"Is this a good time to switch companies?","intent":"career","horizon":"unspecified"}
+{"id":"car-03","question":"What does my chart say about a promotion this year?","intent":"career","horizon":"year"}
+{"id":"car-04","question":"My appraisal is next week, how will it go?","intent":"career","horizon":"week"}
+{"id":"car-05","question":"Will I ever become a manager?","intent":"career","horizon":"lifetime"}
+{"id":"car-06","question":"How is my work life looking over the next few months?","intent":"career","horizon":"quarter"}
+{"id":"car-07","question":"Should I quit and start my own business?","intent":"career","horizon":"unspecified","secondary":["finance"]}
+{"id":"car-08","question":"Is today a good day to give my resignation?","intent":"career","horizon":"today"}
+{"id":"car-09","question":"My boss and I are not getting along at the office lately","intent":"career","horizon":"unspecified"}
+{"id":"car-10","question":"What career suits me best according to my kundli?","intent":"career","horizon":"lifetime"}
+{"id":"car-11","question":"Will I get the offer I interviewed for this week?","intent":"career","horizon":"week"}
+{"id":"car-12","question":"Should I relocate abroad for work next year?","intent":"career","horizon":"year"}
+{"id":"car-13","question":"Kya mujhe is mahine naukri badalni chahiye?","intent":"career","horizon":"month","lang":"hinglish"}
+{"id":"car-14","question":"मेरी नौकरी कैसी रहेगी इस साल?","intent":"career","horizon":"year","lang":"hi"}
+{"id":"car-15","question":"Job me promotion kab milega?","intent":"career","horizon":"unspecified","lang":"hinglish"}
+{"id":"car-16","question":"I am stuck in the same role for three years, what does the chart say?","intent":"career","horizon":"unspecified","note":"'three years' is duration, not horizon"}
+{"id":"car-17","question":"Should I accept the transfer to Bangalore this quarter?","intent":"career","horizon":"quarter"}
+{"id":"car-18","question":"How is my professional reputation shaping up in the coming year?","intent":"career","horizon":"year"}
+{"id":"rel-01","question":"How will my marriage go over the next few years?","intent":"relationship","horizon":"year","note":"plural 'years' - no extractor pattern covers it"}
+{"id":"rel-02","question":"When will I get married?","intent":"relationship","horizon":"unspecified"}
+{"id":"rel-03","question":"Is my partner right for me?","intent":"relationship","horizon":"unspecified"}
+{"id":"rel-04","question":"Will I meet someone this year?","intent":"relationship","horizon":"year"}
+{"id":"rel-05","question":"My wife and I keep arguing, what does my chart say?","intent":"relationship","horizon":"unspecified"}
+{"id":"rel-06","question":"Should I propose to her this week?","intent":"relationship","horizon":"week"}
+{"id":"rel-07","question":"Will I ever find love?","intent":"relationship","horizon":"lifetime"}
+{"id":"rel-08","question":"How is my love life today?","intent":"relationship","horizon":"today"}
+{"id":"rel-09","question":"Is there a manglik dosha affecting my marriage prospects?","intent":"relationship","horizon":"unspecified"}
+{"id":"rel-10","question":"Should I give this relationship another chance this month?","intent":"relationship","horizon":"month"}
+{"id":"rel-11","question":"What do the coming months hold for my engagement?","intent":"relationship","horizon":"quarter"}
+{"id":"rel-12","question":"How is my compatibility with a Taurus partner?","intent":"relationship","horizon":"unspecified"}
+{"id":"rel-13","question":"Meri shaadi kab hogi?","intent":"relationship","horizon":"unspecified","lang":"hinglish"}
+{"id":"rel-14","question":"मेरा रिश्ता इस हफ्ते कैसा रहेगा?","intent":"relationship","horizon":"week","lang":"hi"}
+{"id":"rel-15","question":"Family pressure is building about my wedding, what should I do?","intent":"relationship","horizon":"unspecified"}
+{"id":"rel-16","question":"Will my divorce be finalised this quarter?","intent":"relationship","horizon":"quarter","note":"relationship, not legal_outcome - no court prediction asked"}
+{"id":"rel-17","question":"Is my friendship with my business partner going to last?","intent":"relationship","horizon":"unspecified"}
+{"id":"rel-18","question":"How will things be with my in-laws next month?","intent":"relationship","horizon":"month"}
+{"id":"hea-01","question":"How is my health looking this month?","intent":"health","horizon":"month"}
+{"id":"hea-02","question":"What does my chart say about my general wellbeing?","intent":"health","horizon":"unspecified"}
+{"id":"hea-03","question":"Should I start a new fitness routine this week?","intent":"health","horizon":"week"}
+{"id":"hea-04","question":"Is my energy going to be low today?","intent":"health","horizon":"today"}
+{"id":"hea-05","question":"Which planets affect my health in my kundli?","intent":"health","horizon":"unspecified"}
+{"id":"hea-06","question":"How will my sleep and stress be over the coming months?","intent":"health","horizon":"quarter"}
+{"id":"hea-07","question":"Is this a good year to focus on my physical fitness?","intent":"health","horizon":"year"}
+{"id":"hea-08","question":"मेरी सेहत आज कैसी रहेगी?","intent":"health","horizon":"today","lang":"hi"}
+{"id":"hea-09","question":"Meri tabiyat is hafte theek rahegi kya?","intent":"health","horizon":"week","lang":"hinglish"}
+{"id":"hea-10","question":"Does my 6th house indicate chronic issues?","intent":"health","horizon":"lifetime"}
+{"id":"hea-11","question":"Should I be careful about my diet this month?","intent":"health","horizon":"month"}
+{"id":"hea-12","question":"What remedies help with my wellbeing?","intent":"health","horizon":"unspecified","secondary":["spiritual"]}
+{"id":"hea-13","question":"Is my mental peace going to improve this year?","intent":"health","horizon":"year","secondary":["spiritual"]}
+{"id":"hea-14","question":"Why do I feel drained every morning lately?","intent":"health","horizon":"unspecified"}
+{"id":"fin-01","question":"Will my finances improve this quarter?","intent":"finance","horizon":"quarter"}
+{"id":"fin-02","question":"Is this a good month to buy property?","intent":"finance","horizon":"month"}
+{"id":"fin-03","question":"How is my money situation looking today?","intent":"finance","horizon":"today"}
+{"id":"fin-04","question":"Will I clear my loans this year?","intent":"finance","horizon":"year"}
+{"id":"fin-05","question":"What does my 11th house say about gains?","intent":"finance","horizon":"unspecified"}
+{"id":"fin-06","question":"Should I lend money to my brother this week?","intent":"finance","horizon":"week"}
+{"id":"fin-07","question":"Will I ever be financially independent?","intent":"finance","horizon":"lifetime"}
+{"id":"fin-08","question":"Is my savings habit going to hold up over the next few months?","intent":"finance","horizon":"quarter"}
+{"id":"fin-09","question":"Paise ki tangi kab door hogi?","intent":"finance","horizon":"unspecified","lang":"hinglish"}
+{"id":"fin-10","question":"मेरी आर्थिक स्थिति इस महीने कैसी रहेगी?","intent":"finance","horizon":"month","lang":"hi"}
+{"id":"fin-11","question":"Is a big expense coming up for me?","intent":"finance","horizon":"unspecified"}
+{"id":"fin-12","question":"How is wealth indicated in my chart overall?","intent":"finance","horizon":"lifetime"}
+{"id":"fin-13","question":"Should I renegotiate my rent next month?","intent":"finance","horizon":"month"}
+{"id":"fin-14","question":"Will my business revenue pick up this quarter?","intent":"finance","horizon":"quarter","secondary":["career"]}
+{"id":"fin-15","question":"Is today auspicious for a large purchase?","intent":"finance","horizon":"today"}
+{"id":"fin-16","question":"What does Jupiter's position mean for my income?","intent":"finance","horizon":"unspecified"}
+{"id":"dai-01","question":"What does today look like for me?","intent":"daily","horizon":"today"}
+{"id":"dai-02","question":"How is my day going to be?","intent":"daily","horizon":"today"}
+{"id":"dai-03","question":"Give me my horoscope for today","intent":"daily","horizon":"today"}
+{"id":"dai-04","question":"Is today a good day overall?","intent":"daily","horizon":"today"}
+{"id":"dai-05","question":"What is the panchang saying right now?","intent":"daily","horizon":"today"}
+{"id":"dai-06","question":"Is there rahu kaal I should avoid this evening?","intent":"daily","horizon":"today"}
+{"id":"dai-07","question":"How will tomorrow be for me?","intent":"daily","horizon":"today"}
+{"id":"dai-08","question":"What is the tithi today and what does it mean for me?","intent":"daily","horizon":"today"}
+{"id":"dai-09","question":"आज मेरा दिन कैसा रहेगा?","intent":"daily","horizon":"today","lang":"hi"}
+{"id":"dai-10","question":"Aaj ka din kaisa rahega mere liye?","intent":"daily","horizon":"today","lang":"hinglish"}
+{"id":"dai-11","question":"How is this week shaping up for me generally?","intent":"daily","horizon":"week"}
+{"id":"dai-12","question":"Is this a good muhurat window this morning?","intent":"daily","horizon":"today"}
+{"id":"dai-13","question":"What should I watch out for today?","intent":"daily","horizon":"today"}
+{"id":"dai-14","question":"Which nakshatra is running and how does it affect me today?","intent":"daily","horizon":"today"}
+{"id":"spi-01","question":"Which mantra should I chant for peace of mind?","intent":"spiritual","horizon":"unspecified"}
+{"id":"spi-02","question":"Is this a good time to start meditating daily?","intent":"spiritual","horizon":"unspecified"}
+{"id":"spi-03","question":"What is my spiritual path according to my chart?","intent":"spiritual","horizon":"lifetime"}
+{"id":"spi-04","question":"Should I do a puja this week?","intent":"spiritual","horizon":"week"}
+{"id":"spi-05","question":"Which deity should I worship based on my kundli?","intent":"spiritual","horizon":"unspecified"}
+{"id":"spi-06","question":"Does my 12th house indicate moksha tendencies?","intent":"spiritual","horizon":"lifetime"}
+{"id":"spi-07","question":"Is fasting on a particular day good for me?","intent":"spiritual","horizon":"unspecified"}
+{"id":"spi-08","question":"How can I strengthen a weak planet in my chart?","intent":"spiritual","horizon":"unspecified"}
+{"id":"spi-09","question":"Should I visit a temple today?","intent":"spiritual","horizon":"today"}
+{"id":"spi-10","question":"कौन सा मंत्र मेरे लिए अच्छा रहेगा?","intent":"spiritual","horizon":"unspecified","lang":"hi"}
+{"id":"spi-11","question":"Is a gemstone recommended for me this year?","intent":"spiritual","horizon":"year"}
+{"id":"spi-12","question":"What does my chart say about my karma and dharma?","intent":"spiritual","horizon":"lifetime"}
+{"id":"gen-01","question":"Tell me about my chart","intent":"general","horizon":"unspecified"}
+{"id":"gen-02","question":"What is my lagna and what does it mean?","intent":"general","horizon":"unspecified"}
+{"id":"gen-03","question":"What dasha am I running?","intent":"general","horizon":"unspecified"}
+{"id":"gen-04","question":"What should I know about myself?","intent":"general","horizon":"unspecified"}
+{"id":"gen-05","question":"Anything important coming up for me this month?","intent":"general","horizon":"month"}
+{"id":"gen-06","question":"What are my strengths according to Vedic astrology?","intent":"general","horizon":"lifetime"}
+{"id":"gen-07","question":"Explain my moon sign to me","intent":"general","horizon":"unspecified"}
+{"id":"gen-08","question":"How does my antardasha change things?","intent":"general","horizon":"unspecified"}
+{"id":"gen-09","question":"मेरे बारे में कुछ बताइए","intent":"general","horizon":"unspecified","lang":"hi"}
+{"id":"gen-10","question":"Kuch bhi bata do mere baare mein","intent":"general","horizon":"unspecified","lang":"hinglish"}
+{"id":"gen-11","question":"What is the next big phase in my life?","intent":"general","horizon":"lifetime"}
+{"id":"gen-12","question":"Is anything significant happening this week?","intent":"general","horizon":"week"}
+{"id":"cmp-01","question":"Should I take this job offer, it pays more but I would have to move away from my partner","intent":"career","horizon":"unspecified","secondary":["finance","relationship"],"tags":["compound"]}
+{"id":"cmp-02","question":"How are my career and health looking this month?","intent":"career","horizon":"month","secondary":["health"],"tags":["compound"]}
+{"id":"cmp-03","question":"Will I earn more and get married this year?","intent":"finance","horizon":"year","secondary":["relationship"],"tags":["compound"]}
+{"id":"cmp-04","question":"My business is struggling and it is affecting my marriage","intent":"career","horizon":"unspecified","secondary":["finance","relationship"],"tags":["compound"]}
+{"id":"cmp-05","question":"Should I spend on a health retreat this quarter?","intent":"health","horizon":"quarter","secondary":["finance"],"tags":["compound"]}
+{"id":"cmp-06","question":"Is today good for both a business meeting and a family function?","intent":"daily","horizon":"today","secondary":["career","relationship"],"tags":["compound"]}
+{"id":"amb-01","question":"What about next month?","intent":"general","horizon":"month","tags":["ambiguous"],"note":"follow-up phrasing with no standalone subject"}
+{"id":"amb-02","question":"Is it a good time?","intent":"general","horizon":"unspecified","tags":["ambiguous"]}
+{"id":"amb-03","question":"Tell me more","intent":"general","horizon":"unspecified","tags":["ambiguous"]}
+{"id":"amb-04","question":"And after that?","intent":"general","horizon":"unspecified","tags":["ambiguous"]}
+{"id":"amb-05","question":"Hmm ok","intent":"general","horizon":"unspecified","tags":["ambiguous"]}
+{"id":"amb-06","question":"Why is everything so hard right now?","intent":"general","horizon":"today","tags":["ambiguous"]}
+{"id":"amb-07","question":"What do the stars say?","intent":"general","horizon":"unspecified","tags":["ambiguous"]}
+{"id":"amb-08","question":"Should I?","intent":"general","horizon":"unspecified","tags":["ambiguous"]}
+{"id":"amb-09","question":"Kal ka kya scene hai?","intent":"general","horizon":"today","lang":"hinglish","tags":["ambiguous"],"note":"'kal' is ambiguous between yesterday and tomorrow in Hindi"}
+{"id":"amb-10","question":"Things have been strange lately","intent":"general","horizon":"unspecified","tags":["ambiguous"]}

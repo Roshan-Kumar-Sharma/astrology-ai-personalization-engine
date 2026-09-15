@@ -53,6 +53,7 @@ design decisions, domain primer, AI concepts, and a full interview guide — is 
 | [Interview Guide](docs/10-interview-guide.md) | Q&A including the questions designed to find cracks |
 | [Diagrams](docs/architecture.md) | Mermaid: pipeline, layers, decision flow |
 | **[Code Walkthrough](docs/code/README.md)** | **Every file and function explained, in dependency order** |
+| **[Golden Eval](eval/README.md)** | **215 labelled cases, the measured baseline, and what it found** |
 
 ## Contents
 
@@ -672,7 +673,7 @@ Also emitted: `upstream.retry`, `upstream.failed`, `safety.blocked`,
 
 ## Testing
 
-**130 tests.** The e2e suite runs over real HTTP against the mock upstream on its
+**140 tests.** The e2e suite runs over real HTTP against the mock upstream on its
 own port — deliberately not stubbed at the service boundary, since the
 concurrency, retry, timeout and partial-failure paths only mean something if a
 socket is involved.
@@ -687,6 +688,7 @@ socket is involved.
 | `answer.spec.ts`            | Groundedness detection, confidence factors and caps                |
 | `ttl-cache.spec.ts`         | Stale-while-revalidate, eviction, IST-boundary TTLs                |
 | `personalize.e2e.spec.ts`   | Both endpoints, validation, degradation, per-user personalization  |
+| `eval/eval.spec.ts`         | The golden-eval baseline, as a one-sided regression gate           |
 
 Three real bugs were found by tests while building, and are worth naming because
 they are the kind that ship silently:
@@ -796,13 +798,20 @@ per-instance and reset on deploy — see below.
 
 ## What I would do with another day
 
-1. **A golden eval set.** ~200 labelled questions (intent, horizon, expected
-   sources) with an offline scorer, so rule changes are measured rather than
-   argued about, plus an LLM-as-judge rubric for answer quality across tones and
-   languages. This is the highest-value missing piece: right now I can assert the
-   engine is *consistent*, not that it is *good*.
+1. ~~**A golden eval set.**~~ **Built** — 215 labelled cases and an offline
+   scorer in **[eval/](eval/README.md)**, running in CI as a regression gate.
+   What it measured is unflattering and worth stating plainly: intent accuracy
+   **73.3%**, horizon **87.5%**, safety block recall **54.5%**, selection pass
+   rate **88.5%**. The safety layer cites the right policy 100% of the time and
+   wrongly refuses only 2.8% of safe questions — it is the *coverage* that is
+   thin, not the design. Still outstanding from this item: the LLM-as-judge
+   rubric for answer quality, which needs generation and so cannot live in the
+   CI gate.
 2. **The LLM intent fallback**, gated on the calibrated confidence the classifier
    already returns, with hit rate and accuracy lift measured before enabling.
+   The eval now quantifies the prize: 21 of 32 intent misses are some intent
+   collapsing into `general`, so the lexicon under-triggers rather than
+   mis-triggers, and secondary-intent recall is 7.7%.
 3. **Transits (gochar).** The single biggest missing astrological signal. Saturn
    crossing the 10th house is the classic career-change trigger, and Sade Sati
    (Saturn transiting the 12th/1st/2nd from the Moon) is the question Indian

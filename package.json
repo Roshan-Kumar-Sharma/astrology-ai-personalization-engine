@@ -11,8 +11,9 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
-    "format": "prettier --write \"{src,test}/**/*.ts\"",
-    "demo": "ts-node scripts/demo.ts"
+    "format": "prettier --write \"{src,test,eval}/**/*.ts\"",
+    "demo": "ts-node scripts/demo.ts",
+    "eval": "ts-node -T eval/run.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.122.0",
