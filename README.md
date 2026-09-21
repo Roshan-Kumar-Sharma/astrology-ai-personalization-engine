@@ -742,7 +742,7 @@ Also emitted: `upstream.retry`, `upstream.failed`, `safety.blocked`,
 
 ## Testing
 
-**191 tests.** The e2e suite runs over real HTTP against the mock upstream on its
+**218 tests.** The e2e suite runs over real HTTP against the mock upstream on its
 own port — deliberately not stubbed at the service boundary, since the
 concurrency, retry, timeout and partial-failure paths only mean something if a
 socket is involved.
@@ -875,11 +875,19 @@ per-instance and reset on deploy — see below.
    written cold scored **43.8%** before those patterns were fixed, and that is
    the number to quote. Still outstanding from this item: the LLM-as-judge rubric
    for answer quality, which needs generation and so cannot live in the CI gate.
-2. **The LLM intent fallback**, gated on the calibrated confidence the classifier
-   already returns, with hit rate and accuracy lift measured before enabling.
-   The eval now quantifies the prize: 21 of 32 intent misses are some intent
-   collapsing into `general`, so the lexicon under-triggers rather than
-   mis-triggers, and secondary-intent recall is 7.7%.
+2. ~~**The LLM intent fallback.**~~ **Built** — `IntentResolver` escalates only
+   questions where the lexicon found no signal at all (confidence < 0.35), which
+   is the measured knee: 34% of traffic containing 66% of all intent errors.
+   Measured lift **+9.2 points** (73.3% → 82.5%), fixing 14 questions and
+   breaking 3. It ships **off by default**: 37% of calls failed on a free tier,
+   and the decision to enable belongs to whoever can measure it on their own
+   provider (`npm run eval:gate`, `npm run eval:intent-llm`).
+
+   The finding worth keeping: all 14 fixes were `general → specific`, and all 3
+   breaks were the reverse — contentless questions like *"Is it a good time?"*
+   where the model committed to a topic anyway. **The lexicon under-triggers;
+   the LLM over-triggers.** That is the argument for the cascade and for keeping
+   the gate tight.
 3. **Transits (gochar).** The single biggest missing astrological signal. Saturn
    crossing the 10th house is the classic career-change trigger, and Sade Sati
    (Saturn transiting the 12th/1st/2nd from the Moon) is the question Indian

@@ -13,6 +13,7 @@ import { PersonalizationPlan } from '../personalization/types';
 import { GuardrailsService } from '../safety/guardrails.service';
 import { ContextAggregator } from '../upstream/context-aggregator.service';
 import { ContextBundle } from '../upstream/types';
+import { IntentResolver } from '../personalization/intent/intent.resolver';
 
 export interface PersonalizeCommand {
   userId: string;
@@ -56,6 +57,7 @@ export class PersonalizeService {
     private readonly guardrails: GuardrailsService,
     private readonly aggregator: ContextAggregator,
     private readonly personalization: PersonalizationService,
+    private readonly intent: IntentResolver,
     private readonly promptBuilder: PromptBuilder,
     private readonly groundedness: GroundednessService,
     private readonly confidence: ConfidenceService,
@@ -94,11 +96,17 @@ export class PersonalizeService {
       };
     }
 
-    // --- 2. Gather -----------------------------------------------------------
-    const bundle = await this.aggregator.gather(userId, trace);
+    // --- 2. Gather, and resolve intent alongside it ---------------------------
+    // Intent does not depend on the user's data, so escalating it to the model
+    // runs concurrently with the upstream fan-out rather than after it. When the
+    // fallback is off, `resolve` is the same synchronous lexicon call as before.
+    const [bundle, intent] = await Promise.all([
+      this.aggregator.gather(userId, trace),
+      this.intent.resolve(question, trace),
+    ]);
 
     // --- 3. Plan -------------------------------------------------------------
-    const plan = this.personalization.plan({ question, bundle, guardrail, trace });
+    const plan = this.personalization.plan({ question, bundle, guardrail, intent, trace });
 
     // --- 4. Generate ---------------------------------------------------------
     const prompt = trace.timeSync('prompt.build', () => this.promptBuilder.build(question, plan));

@@ -14,7 +14,9 @@
     "format": "prettier --write \"{src,test,eval}/**/*.ts\"",
     "demo": "ts-node scripts/demo.ts",
     "eval": "ts-node -T eval/run.ts",
-    "why": "ts-node -T scripts/why.ts"
+    "why": "ts-node -T scripts/why.ts",
+    "eval:intent-llm": "ts-node -T eval/intent-llm.ts",
+    "eval:gate": "ts-node -T eval/intent-gate.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.122.0",

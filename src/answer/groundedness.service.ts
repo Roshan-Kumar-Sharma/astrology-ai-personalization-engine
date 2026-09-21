@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { SIGNS } from '../astrology/zodiac';
 import { ScoredItem } from '../personalization/types';
+import { extractJsonObject, stripReasoning } from '../llm/parse';
 
 export interface ParsedModelOutput {
   answer: string;
@@ -168,30 +169,6 @@ function housesMentioned(answer: string): number[] {
     if (new RegExp(`\\b${word}\\s+house\\b`).test(answer)) found.add(n);
   }
   return [...found].filter((n) => n >= 1 && n <= 12);
-}
-
-/**
- * Removes visible chain-of-thought.
- *
- * A large share of the models on free tiers are reasoning models, and several
- * emit their thinking as ordinary content rather than in a separate field. Left
- * in, it reaches the user as the answer.
- */
-function stripReasoning(text: string): string {
-  return text
-    .replace(/<think>[\s\S]*?<\/think>/gi, '')
-    .replace(/<reasoning>[\s\S]*?<\/reasoning>/gi, '')
-    .replace(/^[\s\S]*?<\/think>/i, '');
-}
-
-/** Finds the outermost JSON object, tolerating markdown fences and preamble. */
-function extractJsonObject(text: string): string | undefined {
-  const fenced = /```(?:json)?\s*([\s\S]*?)```/.exec(text);
-  const candidate = fenced ? fenced[1].trim() : text;
-  const start = candidate.indexOf('{');
-  const end = candidate.lastIndexOf('}');
-  if (start < 0 || end <= start) return undefined;
-  return candidate.slice(start, end + 1);
 }
 
 function isDefined<T>(v: T | undefined): v is T {

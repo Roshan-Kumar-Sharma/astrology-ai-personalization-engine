@@ -10,7 +10,7 @@ import { ContextSelector } from './context.selector';
 import { extractHorizon } from './intent/horizon.extractor';
 import { IntentClassifier } from './intent/intent.classifier';
 import { StyleResolver } from './style.resolver';
-import { PersonalizationPlan } from './types';
+import { PersonalizationPlan, IntentResult } from './types';
 import { estimateJsonTokens } from '../llm/tokenizer';
 
 /**
@@ -30,6 +30,14 @@ export interface PlanInput {
   question: string;
   bundle: ContextBundle;
   guardrail: GuardrailDecision;
+  /**
+   * Intent resolved upstream, when the pipeline escalated to the LLM.
+   *
+   * Omitted, the engine classifies with the lexicon itself. That fallback is
+   * what keeps `plan()` synchronous and LLM-free, and it is why the golden eval
+   * can sweep 249 cases in a second.
+   */
+  intent?: IntentResult;
   trace: RequestTrace;
 }
 
@@ -59,9 +67,8 @@ export class PersonalizationService {
     const { question, bundle, guardrail, trace } = input;
 
     // --- 1. What is being asked, and over what window? -----------------------
-    const intentResult = trace.timeSync('intent.classify', () =>
-      this.classifier.classify(question),
-    );
+    const intentResult =
+      input.intent ?? trace.timeSync('intent.classify', () => this.classifier.classify(question));
     const { horizon, signal } = trace.timeSync('intent.horizon', () => extractHorizon(question));
 
     trace.note(

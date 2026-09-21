@@ -7,6 +7,7 @@ import { LlmModule } from './llm/llm.module';
 import { ContextItemBuilder } from './personalization/context-item.builder';
 import { ContextSelector } from './personalization/context.selector';
 import { IntentClassifier } from './personalization/intent/intent.classifier';
+import { IntentResolver } from './personalization/intent/intent.resolver';
 import { PersonalizationService } from './personalization/personalization.service';
 import { StyleResolver } from './personalization/style.resolver';
 import { GuardrailsService } from './safety/guardrails.service';
@@ -38,6 +39,7 @@ import { HealthController } from './api/health.controller';
 
     // personalization engine
     IntentClassifier,
+    IntentResolver,
     ContextItemBuilder,
     ContextSelector,
     StyleResolver,
