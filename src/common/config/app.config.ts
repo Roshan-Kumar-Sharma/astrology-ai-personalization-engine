@@ -94,6 +94,24 @@ const EnvSchema = z.object({
    */
   INTENT_LLM_TIMEOUT_MS: z.coerce.number().default(4000),
 
+  // ---- Second-layer safety screen ----------------------------------------
+  /**
+   * Ask the model to re-screen questions the deterministic layer allowed.
+   *
+   * Off by default. It screens every non-blocked question - there is no useful
+   * confidence gate here, because the patterns are silent exactly where they
+   * fail - so enabling it roughly doubles the LLM calls on safe traffic. The
+   * case for paying that is in docs/11: the pattern layer scores 43.8% on
+   * phrasings it was not tuned against.
+   */
+  SAFETY_LLM_SCREEN: envBool(false),
+  /**
+   * Tighter than the generation timeout. It runs concurrently with the upstream
+   * fan-out, and the deterministic decision is already in hand, so waiting is
+   * never worth more than a moment.
+   */
+  SAFETY_LLM_TIMEOUT_MS: z.coerce.number().default(4000),
+
   // ---- Context budget ----------------------------------------------------
   /** Hard ceiling on context tokens sent to the LLM (free tier). */
   CONTEXT_TOKEN_BUDGET_FREE: z.coerce.number().default(320),

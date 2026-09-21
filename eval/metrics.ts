@@ -66,7 +66,8 @@ export function classify(
   };
 }
 
-export const pct = (n: number) => `${(n * 100).toFixed(1)}%`;
+/** `-` rather than `NaN%` for an empty denominator, which reads as a bug. */
+export const pct = (n: number) => (Number.isFinite(n) ? `${(n * 100).toFixed(1)}%` : '-');
 
 /** Left-aligned first column, right-aligned numerics. */
 export function table(headers: string[], rows: (string | number)[][]): string {

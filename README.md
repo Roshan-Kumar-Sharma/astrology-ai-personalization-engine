@@ -569,6 +569,13 @@ Blocked questions **never reach the upstream services or the LLM** — screening
 the first stage of the pipeline. Constrained ones proceed with mandatory
 directives injected into the system prompt.
 
+With the optional second layer enabled that invariant weakens in one precise
+way, and it is worth stating rather than glossing: a question refused by the
+*model* screen has already had its upstream fetch dispatched, because the screen
+runs concurrently with the fan-out. A refused question still never reaches the
+**generation** model. A deterministically refused question still costs nothing
+at all.
+
 Two matching modes, because one regex per policy is too brittle for the case that
 matters most. `"Will my mother's cancer be cured?"` slips straight past a pattern
 written for `"will cancer be cured"` — the possessive breaks it. So high-risk
@@ -622,6 +629,29 @@ tracks the injection subset as its own metric (**95%**, 19/20).
 There is an output-side rule too (`output.instruction_leak`): if a phrasing
 nobody anticipated does get through and the model starts reciting what it was
 told, the answer is replaced rather than delivered.
+
+### A second layer behind the patterns
+
+`SAFETY_LLM_SCREEN=true` adds an LLM screen **behind** the deterministic one,
+for the recall the patterns cannot reach. Three properties make it safe to put a
+probabilistic component in a safety path:
+
+1. **It can only ever add a refusal, never remove one.** A deterministic block
+   returns before the screen is reached — asserted in `safety-layering.spec.ts`
+   with the screen enabled and a counting provider that receives zero calls.
+2. **It picks a policy id, not words.** The user reads the same reviewed
+   `blockResponse`, so refusals stay explainable and never model-generated.
+3. **It fails open to the deterministic decision.** An outage degrades the
+   service to exactly what ships today.
+
+There is deliberately **no confidence gate**, unlike the intent fallback: the
+patterns are silent precisely where they fail, so any cheap gate would rebuild
+the ceiling the layer exists to remove. It screens every allowed question, and
+that cost is why it ships off.
+
+It is **not yet measured against a live model** — the free-tier daily cap ran out
+first — so it stays off until `npm run eval:safety-llm` says otherwise. The
+number to watch there is the false-positive column, not the recall lift.
 
 ### What measurement did to this layer
 
@@ -742,7 +772,7 @@ Also emitted: `upstream.retry`, `upstream.failed`, `safety.blocked`,
 
 ## Testing
 
-**218 tests.** The e2e suite runs over real HTTP against the mock upstream on its
+**235 tests.** The e2e suite runs over real HTTP against the mock upstream on its
 own port — deliberately not stubbed at the service boundary, since the
 concurrency, retry, timeout and partial-failure paths only mean something if a
 socket is involved.
@@ -754,6 +784,8 @@ socket is involved.
 | `intent.spec.ts`            | All sample questions, Hinglish/Devanagari, horizon extraction      |
 | `context.selector.spec.ts`  | Exclusions, horizon drops, supersession, budget, reliability gate  |
 | `guardrails.spec.ts`        | Every block/constrain policy, injection handling, **and false positives** |
+| `llm-safety.screen.spec.ts` | The second-layer screen: every failure mode fails open                     |
+| `safety-layering.spec.ts`   | A deterministic refusal never reaches the model at all                     |
 | `answer.spec.ts`            | Groundedness detection, confidence factors and caps                |
 | `ttl-cache.spec.ts`         | Stale-while-revalidate, eviction, IST-boundary TTLs                |
 | `personalize.e2e.spec.ts`   | Both endpoints, validation, degradation, per-user personalization  |

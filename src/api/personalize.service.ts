@@ -14,6 +14,7 @@ import { GuardrailsService } from '../safety/guardrails.service';
 import { ContextAggregator } from '../upstream/context-aggregator.service';
 import { ContextBundle } from '../upstream/types';
 import { IntentResolver } from '../personalization/intent/intent.resolver';
+import { LlmSafetyScreen } from '../safety/llm-safety.screen';
 
 export interface PersonalizeCommand {
   userId: string;
@@ -55,6 +56,7 @@ export class PersonalizeService {
     @Inject(APP_CONFIG) private readonly cfg: AppConfig,
     @Inject(LLM_PROVIDER) private readonly llm: LlmProvider,
     private readonly guardrails: GuardrailsService,
+    private readonly llmSafety: LlmSafetyScreen,
     private readonly aggregator: ContextAggregator,
     private readonly personalization: PersonalizationService,
     private readonly intent: IntentResolver,
@@ -79,31 +81,51 @@ export class PersonalizeService {
         policies: guardrail.matchedPolicies,
       });
       trace.note(`Blocked by safety policy: ${guardrail.matchedPolicies.join(', ')}`);
-      return {
-        answer: guardrail.blockResponse ?? FALLBACK_REFUSAL,
-        // We are fully confident in the refusal itself; it is not a hedge.
-        confidence: 'HIGH',
-        sourcesUsed: [],
-        meta: cmd.verbose
-          ? {
-              blocked: true,
-              policies: guardrail.matchedPolicies,
-              rationale: guardrail.rationale,
-              escalateToHuman: guardrail.escalateToHuman,
-              latencyMs: trace.totalMs(),
-            }
-          : undefined,
-      };
+      return this.refusal(
+        guardrail.blockResponse ?? FALLBACK_REFUSAL,
+        guardrail.matchedPolicies,
+        guardrail.rationale,
+        guardrail.escalateToHuman,
+        cmd.verbose,
+        trace,
+      );
     }
 
-    // --- 2. Gather, and resolve intent alongside it ---------------------------
-    // Intent does not depend on the user's data, so escalating it to the model
-    // runs concurrently with the upstream fan-out rather than after it. When the
-    // fallback is off, `resolve` is the same synchronous lexicon call as before.
-    const [bundle, intent] = await Promise.all([
+    // --- 2. Gather, resolve intent, and re-screen - all concurrently ----------
+    // None of the three depends on the others. Intent does not need the user's
+    // data, and the second-layer safety screen needs only the question, so both
+    // model calls overlap the upstream fan-out instead of queueing behind it.
+    //
+    // A deterministic block still costs nothing: it returned above, before any
+    // of this was dispatched. A *second-layer* block does dispatch the fan-out,
+    // so the honest form of the invariant is that a refused question never
+    // reaches the generation model - the user's own data may already have been
+    // fetched before the refusal was decided.
+    const [bundle, intent, escalated] = await Promise.all([
       this.aggregator.gather(userId, trace),
       this.intent.resolve(question, trace),
+      this.llmSafety.screen(question, trace),
     ]);
+
+    if (escalated.outcome === 'flagged' && escalated.policy) {
+      const policy = escalated.policy;
+      this.logger.warn('safety.blocked', {
+        requestId: trace.requestId,
+        userId,
+        policies: [policy.id],
+        layer: 'llm',
+      });
+      // The reviewed copy, not the model's words: the second layer chooses a
+      // policy, and the policy already owns what the user reads.
+      return this.refusal(
+        policy.blockResponse ?? FALLBACK_REFUSAL,
+        [policy.id],
+        [policy.rationale],
+        policy.escalateToHuman ?? false,
+        cmd.verbose,
+        trace,
+      );
+    }
 
     // --- 3. Plan -------------------------------------------------------------
     const plan = this.personalization.plan({ question, bundle, guardrail, intent, trace });
@@ -194,6 +216,26 @@ export class PersonalizeService {
    * fallback is recorded so the confidence label is downgraded and the event
    * shows up in logs rather than passing silently.
    */
+  /** One shape for every refusal, whichever layer decided it. */
+  private refusal(
+    answer: string,
+    policies: string[],
+    rationale: string[],
+    escalateToHuman: boolean,
+    verbose: boolean | undefined,
+    trace: RequestTrace,
+  ): PersonalizeResult {
+    return {
+      answer,
+      // We are fully confident in the refusal itself; it is not a hedge.
+      confidence: 'HIGH',
+      sourcesUsed: [],
+      meta: verbose
+        ? { blocked: true, policies, rationale, escalateToHuman, latencyMs: trace.totalMs() }
+        : undefined,
+    };
+  }
+
   private async generate(
     prompt: ReturnType<PromptBuilder['build']>,
     trace: RequestTrace,

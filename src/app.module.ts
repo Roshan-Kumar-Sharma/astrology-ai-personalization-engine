@@ -11,6 +11,7 @@ import { IntentResolver } from './personalization/intent/intent.resolver';
 import { PersonalizationService } from './personalization/personalization.service';
 import { StyleResolver } from './personalization/style.resolver';
 import { GuardrailsService } from './safety/guardrails.service';
+import { LlmSafetyScreen } from './safety/llm-safety.screen';
 import { ContextAggregator } from './upstream/context-aggregator.service';
 import { UpstreamClient } from './upstream/upstream.client';
 import { DebugController } from './api/debug.controller';
@@ -47,6 +48,7 @@ import { HealthController } from './api/health.controller';
 
     // safety
     GuardrailsService,
+    LlmSafetyScreen,
 
     // answer post-processing
     GroundednessService,
