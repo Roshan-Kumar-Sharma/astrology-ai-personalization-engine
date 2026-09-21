@@ -17,6 +17,7 @@ Read in order if you are new. Jump around if you are not.
 | 8 | [AI & LLM Concepts](08-ai-concepts.md) | Grounding, token budgets, prompt design, intent classification, why not RAG. |
 | 9 | [API Reference](09-api-reference.md) | Endpoints, contracts, examples, error behaviour. |
 | 10 | [Interview Guide](10-interview-guide.md) | The questions you will be asked, including the ones designed to find cracks. |
+| 11 | [Evaluation & Safety](11-evaluation-and-safety.md) | How the eval and the safety hardening work — concepts, issues hit, and **experiments to run**. |
 | — | [Architecture Diagrams](architecture.md) | Mermaid diagrams: pipeline, layers, per-item decision flow. |
 
 ### Reading the source itself

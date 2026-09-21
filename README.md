@@ -51,6 +51,7 @@ design decisions, domain primer, AI concepts, and a full interview guide — is 
 | [AI & LLM Concepts](docs/08-ai-concepts.md) | Grounding, context engineering, why not RAG |
 | [API Reference](docs/09-api-reference.md) | Endpoints, contracts, curl cookbook |
 | [Interview Guide](docs/10-interview-guide.md) | Q&A including the questions designed to find cracks |
+| **[Evaluation & Safety](docs/11-evaluation-and-safety.md)** | **Concepts, issues hit, decisions, and 8 experiments you can run** |
 | [Diagrams](docs/architecture.md) | Mermaid: pipeline, layers, decision flow |
 | **[Code Walkthrough](docs/code/README.md)** | **Every file and function explained, in dependency order** |
 | **[Golden Eval](eval/README.md)** | **249 labelled cases, the measured baseline, and what it found** |

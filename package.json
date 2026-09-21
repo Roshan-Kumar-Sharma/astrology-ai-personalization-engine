@@ -13,7 +13,8 @@
     "test:cov": "jest --coverage",
     "format": "prettier --write \"{src,test,eval}/**/*.ts\"",
     "demo": "ts-node scripts/demo.ts",
-    "eval": "ts-node -T eval/run.ts"
+    "eval": "ts-node -T eval/run.ts",
+    "why": "ts-node -T scripts/why.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.122.0",
