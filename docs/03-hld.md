@@ -147,7 +147,8 @@ no secrets in the repo (`.env` gitignored, `.env.example` placeholders only),
 non-root Docker user.
 
 **Deliberately absent — see [Design Decisions](05-design-decisions.md):**
-authentication, authorization, rate limiting, and prompt-injection detection.
+authentication, authorization and rate limiting. (Prompt-injection detection is
+no longer on this list - it now lives in the guardrail layer as three policies.)
 `userId` is trusted from the request body; in production it must come from a
 verified session, or any caller can read any user's chart.
 

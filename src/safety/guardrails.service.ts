@@ -121,6 +121,16 @@ const HARD_OUTPUT_RULES: { id: string; pattern: RegExp }[] = [
     id: 'output.guarantee',
     pattern: /\b(i\s+)?guarantee\b|\bit\s+is\s+certain\s+that\s+you\s+will\b/i,
   },
+  /**
+   * The output side of the injection defence. The input gate stops the obvious
+   * attempts; this catches the case where a phrasing nobody anticipated gets
+   * through and the model starts reciting what it was told rather than what the
+   * chart says.
+   */
+  {
+    id: 'output.instruction_leak',
+    pattern: /\bsystem\s+prompt\b|\bmy\s+(system\s+)?instructions\s+(are|say|state)\b/i,
+  },
 ];
 
 /**
