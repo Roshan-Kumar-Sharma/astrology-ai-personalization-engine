@@ -1,4 +1,4 @@
-import { Body, Controller, Headers, HttpCode, Post } from '@nestjs/common';
+import { Body, Controller, Headers, HttpCode, Post, UseGuards } from '@nestjs/common';
 import { RequestTrace } from '../common/logging/request-trace';
 import { StructuredLogger } from '../common/logging/logger';
 import { ConfidenceService } from '../answer/confidence.service';
@@ -8,8 +8,10 @@ import { PromptBuilder } from '../llm/prompt/prompt.builder';
 import { ContextAggregator } from '../upstream/context-aggregator.service';
 import { INTENT_RULES } from '../personalization/config/intent-rules.config';
 import { PersonalizeRequestDto } from './dto/personalize.dto';
+import { DebugEnabledGuard } from './debug-enabled.guard';
 
 @Controller('debug')
+@UseGuards(DebugEnabledGuard)
 export class DebugController {
   constructor(
     private readonly guardrails: GuardrailsService,

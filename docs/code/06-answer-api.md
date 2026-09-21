@@ -404,6 +404,66 @@ filtered from the summary. The full record stays in `explain.excluded`.
 
 ---
 
+## `api/console.controller.ts`, `console.html`, `console.presets.ts`
+
+The debug console: one static page that drives `/debug/personalization`. Three
+small files and one rule.
+
+```ts
+@Controller('console')
+@UseGuards(DebugEnabledGuard)
+export class ConsoleController {
+  page(): string { /* readFileSync(join(__dirname, 'console.html')) */ }
+  bootstrap() { /* users, provider, flags, budgets, presets */ }
+}
+```
+
+**The rule: the console computes nothing.** Every number it renders is a field in
+the payload. It owns no scoring, no horizon logic, no exclusion vocabulary — so
+it cannot disagree with the engine. A debug UI that recomputes anything
+eventually drifts, and then you have two stories about what the user got.
+
+`page()` re-reads the file on every request outside production, so editing the
+HTML and hitting reload is the whole dev loop. In production it is read once. If
+the file is missing — the classic symptom of a compiled build without the
+`assets` entry in `nest-cli.json` — the error says exactly that instead of
+surfacing an `ENOENT`.
+
+`bootstrap()` describes the **running** service rather than the one the page was
+written against: the configured provider and model, the feature-flag states, the
+budgets, and the fixture user ids. The provider is on screen at all times for a
+specific reason — a failed provider degrades to the local mock, which returns
+fluent, chart-shaped prose, and reading that as a live model's answer is a
+mistake this project has made more than once.
+
+```ts
+export interface ConsolePreset {
+  label: string;  userId: string;  question: string;
+  demonstrates: string;                 // shown to the reader
+  expect: { intent?; horizon?; blocked?; policy?; language?; housesUsed?; panchangUsed? };
+}
+```
+
+The preset chips each make a claim in prose, and prose does not fail a build. So
+the claim is also written as data, and `test/personalize.e2e.spec.ts` asserts
+every one of them — a button that stops demonstrating what it says breaks the
+suite by name.
+
+### `api/debug-enabled.guard.ts`
+
+```ts
+canActivate(): boolean {
+  if (!this.cfg.DEBUG_ENDPOINTS_ENABLED) throw new NotFoundException();
+  return true;
+}
+```
+
+Applied to **both** debug controllers. Hiding the console while leaving the JSON
+endpoint open would be theatre — the page shows nothing the endpoint does not
+return. `404` rather than `403`, because a 403 confirms the route is there.
+
+---
+
 ## `main.ts` — bootstrap
 
 ```ts
@@ -468,6 +528,7 @@ You have now read every file. Two things worth doing:
 `confidence.service.ts`. Five files, one array.
 
 **2. Change something and watch it move.** Set `MIN_SCORE_THRESHOLD` to 60 in
-`intent-rules.config.ts`, restart, and hit the debug endpoint. Watch items move
-from `selectedContext` to `excludedContext` with `reason: 'rule:below-threshold'`.
-That single edit demonstrates the whole config-driven design.
+`intent-rules.config.ts`, restart, and open <http://localhost:3000/console>.
+Watch items move from the selected column to the excluded one under
+`rule:below-threshold`, and watch the "vs previous run" line name every item that
+moved. That single edit demonstrates the whole config-driven design.

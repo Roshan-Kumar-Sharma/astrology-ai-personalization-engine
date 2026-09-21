@@ -112,6 +112,21 @@ const EnvSchema = z.object({
    */
   SAFETY_LLM_TIMEOUT_MS: z.coerce.number().default(4000),
 
+  // ---- Debug surface -----------------------------------------------------
+  /**
+   * Serve `POST /debug/personalization` and the HTML console at `GET /console`.
+   *
+   * One switch for both, deliberately. The console renders nothing the debug
+   * endpoint does not already return, so hiding the page while leaving the JSON
+   * open would be security theatre. Neither carries authentication of its own:
+   * in a real deployment they belong behind the same auth or network policy,
+   * and this is the switch that takes the whole surface away.
+   *
+   * On by default because the debug endpoint is part of the assignment's
+   * contract and the console is how you read it.
+   */
+  DEBUG_ENDPOINTS_ENABLED: envBool(true),
+
   // ---- Context budget ----------------------------------------------------
   /** Hard ceiling on context tokens sent to the LLM (free tier). */
   CONTEXT_TOKEN_BUDGET_FREE: z.coerce.number().default(320),

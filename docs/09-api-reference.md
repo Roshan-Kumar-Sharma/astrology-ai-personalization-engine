@@ -110,6 +110,11 @@ Run the entire engine **except generation**, and explain the reasoning.
 
 Same request shape. **Never calls the LLM — free to invoke.**
 
+> Served only while `DEBUG_ENDPOINTS_ENABLED` is true (the default). Set it to
+> false and this endpoint *and* the console below return `404` — not `403`, which
+> would confirm they exist. Neither carries authentication of its own, so in a
+> real deployment they belong behind the same auth or network policy.
+
 ### Response `200`
 
 The shape the brief specifies, plus an `explain` block:
@@ -161,6 +166,48 @@ interview.
 
 ---
 
+## `GET /console`
+
+The HTML debug console: one self-contained page that drives
+`POST /debug/personalization` and renders it. No build step, no framework, no
+CDN — it works offline and inside a locked-down container.
+
+```bash
+npm start   # then open http://localhost:3000/console
+```
+
+It shows, for one question:
+
+| Panel | What it answers |
+|---|---|
+| Verdict | Intent (and how it was reached), horizon, style, projected confidence, safety state, prompt size |
+| vs previous run | What changed since the last run — including items that stayed excluded **for a different reason** |
+| Safety | The policy that fired, its rationale, and the constraints injected into the prompt |
+| Context ledger | Every selected fact with score, tokens and reason; every excluded fact grouped by *why* |
+| Token accounting | Context sent vs all candidates vs a naive raw-JSON dump vs the budget ceiling |
+| Confidence | Each factor's weight, value and contribution, plus any hard caps |
+| Upstream & latency | Per-source outcome, latency and attempts; per-stage timings |
+| The exact prompt | The text the model would have received, copyable |
+| Raw payload | The response the whole page was rendered from |
+
+Deep-linkable: `?user=user_103&q=What%20should%20I%20focus%20on%20for%20my%20health%3F`
+runs that case on load, which makes a specific decision shareable.
+
+**Generation is opt-in.** The default action costs nothing; the *also write the
+answer* checkbox additionally calls `POST /personalize` and is labelled as
+spending tokens. When the configured provider fails and the service degrades to
+the local fallback, the console says so in a banner above the answer — the prose
+alone is not evidence of a live model.
+
+### `GET /console/bootstrap`
+
+What the page needs to describe the *running* service: the bundled fixture user
+ids, the configured LLM provider and model, the feature-flag states, the context
+budgets, and the preset list. Read-only, and returns nothing the rest of the
+debug surface does not already expose.
+
+---
+
 ## `GET /health`
 
 ```json
@@ -190,6 +237,7 @@ Any endpoint accepts `?fail=1` to force a `503`, for scripted degradation demos.
 | `user_101` | en | premium | motivational | exact (09:35) | Full-confidence path |
 | `user_102` | hi | free | gentle | approximate (18:30) | Devanagari output, reduced budget |
 | `user_103` | hinglish | free | analytical | **unknown** | House suppression, Moon-sign fallback, `MEDIUM` cap |
+| `user_104` | mr | premium | direct | exact (04:22) | A fourth language, and an early-phase dasha |
 
 Every chart is astrologically self-consistent — house lords match what the stated
 lagna actually produces.

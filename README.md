@@ -216,6 +216,9 @@ npm start                    # http://localhost:3000
 That single command also starts the bundled mock upstream on port 4010, so the
 system is fully working with no configuration.
 
+Then open **<http://localhost:3000/console>** — the debug console, which renders
+the engine's entire decision for any question and costs nothing to run.
+
 ```bash
 npm run start:dev            # watch mode
 npm test                     # unit + e2e
@@ -352,6 +355,37 @@ been sent.
 
 This is the **same code path** `/personalize` takes, not a parallel
 reimplementation — so what it shows is necessarily what happens.
+
+### `GET /console`
+
+The **debug console**: one self-contained HTML page — no framework, no build
+step, no CDN — that drives `/debug/personalization` and renders it.
+
+It shows the verdict (intent, horizon, style, confidence, safety, prompt size),
+every selected fact with its score and reason, every excluded fact grouped by
+*why* it was excluded, the token accounting against a naive raw-JSON dump, the
+confidence factors with their weights, upstream health and per-stage latency, and
+the exact prompt. Writing the answer is an opt-in checkbox, labelled as spending
+tokens; everything else is free.
+
+Two details worth calling out, because both are lessons this project learned the
+hard way:
+
+- The line under the verdict cards diffs the run against the previous one — and
+  it diffs the *reasons*, not just the items. Moving a career question from "this
+  month" to "the next few months" selects exactly the same ten facts, so an
+  item-level diff reports nothing; what actually changed is that the panchang
+  went from `rule:below-threshold` to `rule:horizon-drop`, which is the horizon
+  rule doing its job.
+- The configured LLM provider is in the header at all times, and a degraded
+  answer gets a banner. When a provider fails, this service falls back to a local
+  provider that writes fluent, chart-shaped prose; "it read well" is not evidence
+  of a live model.
+
+Both the console and `/debug/personalization` are served only while
+`DEBUG_ENDPOINTS_ENABLED` is true (the default). Set it to false and both return
+`404` — one switch, because hiding the page while leaving the JSON open would be
+theatre.
 
 ### `GET /health`
 
@@ -772,7 +806,7 @@ Also emitted: `upstream.retry`, `upstream.failed`, `safety.blocked`,
 
 ## Testing
 
-**235 tests.** The e2e suite runs over real HTTP against the mock upstream on its
+**250 tests.** The e2e suite runs over real HTTP against the mock upstream on its
 own port — deliberately not stubbed at the service boundary, since the
 concurrency, retry, timeout and partial-failure paths only mean something if a
 socket is involved.
@@ -788,7 +822,7 @@ socket is involved.
 | `safety-layering.spec.ts`   | A deterministic refusal never reaches the model at all                     |
 | `answer.spec.ts`            | Groundedness detection, confidence factors and caps                |
 | `ttl-cache.spec.ts`         | Stale-while-revalidate, eviction, IST-boundary TTLs                |
-| `personalize.e2e.spec.ts`   | Both endpoints, validation, degradation, per-user personalization  |
+| `personalize.e2e.spec.ts`   | Every endpoint, validation, degradation, per-user personalization, **and that each console preset still demonstrates what it claims** |
 | `eval/eval.spec.ts`         | The golden-eval baseline, as a one-sided regression gate           |
 
 Three real bugs were found by tests while building, and are worth naming because
@@ -925,9 +959,23 @@ per-instance and reset on deploy — see below.
    (Saturn transiting the 12th/1st/2nd from the Moon) is the question Indian
    users ask most. Not derivable from the four given services — it needs a
    transit service.
-4. **A debug console.** The `/debug` payload is rich enough to render selected
-   vs excluded context with scores and reasons on a page. Far more persuasive
-   than curl for anyone tuning rules.
+4. ~~**A debug console.**~~ **Built** — [`GET /console`](#get-console), one
+   self-contained page with no framework, no build step and no CDN, rendering
+   the whole decision: selected and excluded context with scores and reasons,
+   token accounting, confidence factors, upstream health and the exact prompt.
+
+   Two things it turned out to be worth more for than "persuasive demo". It
+   diffs consecutive runs at the level of *reasons*, so it catches the engine
+   changing its mind without changing its output — moving a career question from
+   "this month" to "the next few months" selects the identical ten facts while
+   the panchang moves from `rule:below-threshold` to `rule:horizon-drop`. And it
+   puts the configured provider in the header with a banner on any degraded
+   answer, which caught a free-tier `429` fallback within minutes of being
+   built — the exact failure this repo had previously mistaken for a live model
+   response.
+
+   Every demo button on it carries a machine-checkable claim asserted by the e2e
+   suite, so a chip that stops demonstrating what it says fails the build.
 5. **Remedies (upay).** Mantra, gemstone, fasting and charity suggestions keyed
    to the afflicted planet — culturally expected in this product, and the natural
    monetization surface.

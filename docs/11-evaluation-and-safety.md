@@ -22,7 +22,8 @@ the measurement move, change it back.
 - [Feature 3 — Closing the topical pattern gaps](#feature-3--closing-the-topical-pattern-gaps)
 - [Feature 4 — The LLM intent fallback](#feature-4--the-llm-intent-fallback)
 - [Feature 5 — The LLM safety second layer](#feature-5--the-llm-safety-second-layer)
-- [Two tools you now have](#two-tools-you-now-have)
+- [Feature 6 — The debug console](#feature-6--the-debug-console)
+- [The tools you now have](#the-tools-you-now-have)
 - [If you are asked about this in an interview](#if-you-are-asked-about-this-in-an-interview)
 
 ---
@@ -908,7 +909,338 @@ running.
 
 ---
 
-# Two tools you now have
+# Feature 6 — The debug console
+
+`POST /debug/personalization` already returned every decision the engine makes.
+What it did not do is make those decisions *legible*: four hundred lines of JSON
+are a poor way to notice that the panchang stopped being "scored too low" and
+started being "dropped by the horizon". This feature is one static HTML page,
+served by the service, that drives that existing endpoint and renders it.
+
+It is the cheapest feature in this document — no model, no tokens, no new
+dependency — and the one most likely to be used every day.
+
+## Concepts
+
+### A viewer, not a second implementation
+
+The rule the whole page is built on: **the console computes nothing.** Every
+number it shows is a field in the payload. It has no copy of the scoring, no
+opinion about horizons, no second exclusion vocabulary.
+
+That is not laziness, it is the property that makes the page trustworthy. A
+debug UI that recomputes anything eventually disagrees with the thing it is
+explaining, and then you have two sources of truth and no way to tell which one
+the user actually got. Here, if the console and the engine disagree, the console
+is wrong by definition — and since it only reads fields, it cannot.
+
+The one place this bites is honest to state: the console can only show what the
+payload contains. It cannot show what `/personalize` would have *skipped*, which
+is exactly the problem in "Issue 3" below.
+
+### Diffing a decision ledger, not an output
+
+The obvious diff between two runs is "which context items changed". That is what
+the first version did, and it was wrong — see Issue 1. The ledger is not a set of
+selected items; it is a **map from every candidate fact to the decision made
+about it**:
+
+```
+id                       state
+derived.house.10         selected
+panchang.tithi           rule:below-threshold
+horoscope.relationship   rule:excluded
+kundli.house.6           unavailable        (superseded by the derived fact)
+```
+
+Diffing *that* catches a change of mind that leaves the output identical, which
+is the interesting case: the engine reached the same answer for a different
+reason.
+
+### Cross-site scripting, and why this page cannot have it
+
+The question is user input, and it is echoed back into the page in several
+places — the textarea, the verdict notes, the prompt preview, the raw payload.
+The classic mistake is `innerHTML = '...' + question + '...'`, which hands the
+browser markup to *parse*: `<img src=x onerror=alert(1)>` then executes.
+
+Every value on this page goes through one helper that only ever assigns
+`textContent`, which sets a text node — the browser never parses it as markup.
+This is prevention by construction rather than by escaping discipline: there is
+no code path where a payload string reaches an HTML parser, so there is nothing
+to remember to escape. Experiment 20 demonstrates it.
+
+### A debug surface is an attack surface
+
+`/debug/personalization` returns the user's chart-derived facts, the exact
+prompt, and the policy decisions — and carries no authentication. Adding a UI in
+front of it does not change what is exposed, but it does change how easily it is
+*found* and read.
+
+So the flag that turns it off (`DEBUG_ENDPOINTS_ENABLED`) covers **both** the
+page and the endpoint, and answers with **404 rather than 403**: a 403 confirms
+the route exists, which is the one fact worth withholding from someone probing
+for it.
+
+### Executable documentation
+
+Each preset chip makes a claim in prose ("the horizon becomes quarter and the
+panchang is dropped outright"). Prose does not fail a build. So the presets live
+in a typed table, `src/api/console.presets.ts`, where each entry carries a
+machine-checkable `expect` block, and the e2e suite asserts every one of them.
+
+A demo button that has quietly stopped demonstrating what it says is worse than
+no button, because it is now an argument *against* the design in front of the
+person you are demonstrating to.
+
+---
+
+## Issues hit, and how they were resolved
+
+### Issue 1 — The diff said "no change" while the engine changed its mind
+
+The console's "vs previous run" line compared the selected sets. Clicking
+**Job change · this month** and then **Same question · six-month view** printed:
+
+```
+No change from the previous run.
+```
+
+That is true and useless. Both runs select the same ten items and spend the same
+325 tokens — but they are not the same decision:
+
+```
+A: month  325 tok | B: quarter  325 tok
+selected: A=10 B=10
+  Today's Tithi            rule:below-threshold -> rule:horizon-drop
+  Today's Nakshatra        rule:below-threshold -> rule:horizon-drop
+  Today's Yoga             rule:below-threshold -> rule:horizon-drop
+  Today's Karana           rule:below-threshold -> rule:horizon-drop
+  Today's Nakshatra Lord   rule:below-threshold -> rule:horizon-drop
+```
+
+At `month` the panchang loses on score and could come back if the scores moved.
+At `quarter` it is dropped by rule and cannot come back at all. The chip's claim
+was correct; the console was blind to it.
+
+**The fix is the concept above**: diff the whole ledger, and report three kinds
+of change — items that became selected, items that stopped being selected, and
+items that stayed out *for a different reason*. The last category is the one that
+had no representation at all, and it is the one that shows the horizon rule
+working.
+
+### Issue 2 — A flag that meant something other than what it was read as
+
+The bootstrap payload offered the fixture users only when `MOCK_UPSTREAM_ENABLED`
+was true, reasoning that the ids are fiction against real upstreams. The e2e
+suite then failed:
+
+```
+expect(received).toContain(expected)
+Expected value: "user_103"
+Received array: []
+```
+
+`MOCK_UPSTREAM_ENABLED` does not mean "the upstreams are fixtures". It means
+"**start** the mock upstream in this process". The e2e suite runs the very same
+fixtures from a separate port with the flag off, which is exactly the
+configuration the gate mistook for "real upstreams".
+
+There is no config value that answers the question the gate was trying to ask.
+So the list is always offered, and the header labels the situation instead —
+`upstream: bundled mock` versus `upstream: external`, with a note next to the
+picker that the ids may not exist there. **Say it, do not hide it.**
+
+### Issue 3 — The blocked view quietly misrepresented production
+
+For *"When will my father die?"* the console showed **BLOCKED**, and then, below
+it, eleven selected context items, an 880-token prompt and a HIGH confidence
+projection. Every one of those numbers is real — and the impression they create
+is false. In `/personalize`, a refused question returns before the fan-out: no
+upstream call, no prompt, no tokens. `/debug/personalization` runs the plan
+anyway, so you can see what was withheld.
+
+The console cannot detect this from the payload (see "A viewer, not a second
+implementation"), so it states it. The safety panel now ends with what
+`/personalize` would have done, the ledger is headed "Nothing here was sent", and
+the prompt panel says a refused question never reaches the prompt builder.
+
+This one is worth dwelling on: nothing was wrong with the *data*. The defect was
+that a true set of numbers, in the wrong frame, tells a reader something untrue.
+
+### Issue 4 — The flag's own comment argued against the flag
+
+The first version added `DEBUG_CONSOLE_ENABLED`, and the comment written next to
+it said, in effect, that hiding the page while leaving the JSON endpoint open
+would be security theatre. The comment was right and the code was wrong.
+
+It became `DEBUG_ENDPOINTS_ENABLED`, implemented as a `CanActivate` guard applied
+to both controllers, so the whole surface disappears together — verified against
+the compiled build in Experiment 19.
+
+### Smaller ones, for completeness
+
+- `fetch('bootstrap')` from a page served at `/console` resolves to `/bootstrap`,
+  not `/console/bootstrap` — a relative URL resolves against the *directory* of
+  the current path, and `/console` has none. Absolute paths throughout.
+- The "budget ceiling" bar was drawn in the track colour, so a full bar was
+  invisible. It is hatched now, because it is capacity rather than consumption.
+- `nest build` does not copy `.html` next to the compiled `.js`. It needs an
+  `assets` entry in `nest-cli.json`; without it the console 500s in production
+  only. The controller catches `ENOENT` and says exactly that, rather than
+  surfacing a bare stack trace.
+
+---
+
+## Decisions made
+
+1. **No framework, no CDN, no build step.** One HTML file with inline CSS and
+   vanilla JS. The repository gains no frontend dependency, the page works
+   offline and inside a locked-down container, and there is nothing to keep in
+   sync with a bundler. **Cost:** ~350 lines of manual DOM construction that a
+   component library would have shortened, and no reuse if a second page ever
+   appears.
+2. **Generation is opt-in and labelled.** The default action is free — it drives
+   `/debug/personalization`, which never calls a model. Writing the answer is a
+   checkbox marked *spends tokens*. A debug tool whose default costs money gets
+   used less, which defeats the point of building it.
+3. **The provider is always on screen.** Not a detail: every resilience path in
+   this service turns a broken dependency into something that looks healthy. See
+   "What it actually bought".
+4. **Presets are server-side data, not markup.** They are typed, reviewable in a
+   diff, and asserted by tests.
+5. **The console never computes.** Stated above; the cost is that some facts
+   about the *production* path have to be written into the page as prose, because
+   the payload cannot express them.
+6. **404, not 403, when the surface is off.**
+
+---
+
+## What it actually bought, on the first day
+
+Ticking *also write the answer* for user_103 produced a fluent, well-structured,
+entirely chart-shaped Hinglish answer — and a red banner above it:
+
+> **Degraded: this answer came from the local fallback provider, not from
+> openrouter.** Do not read it as evidence about the configured model.
+
+The log line behind it:
+
+```
+"event":"llm.failed","provider":"openrouter",
+"reason":"openrouter API error 429: Rate limit exceeded: free-models-per-day..."
+```
+
+This is the exact mistake recorded twice in this project already: reading the
+mock provider's output as a live model's. The prose gives you nothing to go on —
+it is *supposed* to be plausible, that is what the fallback is for. Two features
+ago that cost an hour and a wrong conclusion written down as fact. Now it is a
+banner that appears before you have finished reading the first sentence.
+
+That is the argument for the console in one screenshot: **the engine was already
+reporting `degraded: true`; nobody was reading field 47 of a JSON blob.**
+
+---
+
+## Experiments
+
+### Experiment 17 — Watch the engine change its mind without changing its answer
+
+```bash
+npm start
+```
+
+Open <http://localhost:3000/console>, click **Job change · this month**, then
+**Same question · six-month view**, and read the grey line under the verdict
+cards:
+
+```
+vs previous run: (+0 context tokens) · same item, different reason:
+Today's Tithi: rule:below-threshold → rule:horizon-drop; Today's Nakshatra: ...
+```
+
+Same ten items, same 325 tokens, different decision. Now click **Today's
+guidance** and watch the same five panchang limbs move to `selected` while the
+dasha material and the 10th house drop below threshold — the drop-vs-demote
+distinction, visible in one line.
+
+### Experiment 18 — Break a preset's claim and watch the test name the chip
+
+In `src/api/console.presets.ts`, change the six-month preset's expectation from
+`horizon: 'quarter'` to `horizon: 'month'`, then:
+
+```bash
+npx jest test/personalize.e2e.spec.ts -t "Same question"
+```
+
+```
+● the debug console › every preset still demonstrates what it claims ›
+  Same question · six-month view
+
+  Expected: "month"
+  Received: "quarter"
+```
+
+The failure names the button. Put it back. This is the mechanism that stops the
+demo from drifting away from the engine.
+
+### Experiment 19 — Take the whole debug surface away
+
+```bash
+npm run build
+DEBUG_ENDPOINTS_ENABLED=false node dist/main.js
+```
+
+```
+GET  /console                 -> 404
+GET  /console/bootstrap       -> 404
+POST /debug/personalization   -> 404
+POST /personalize             -> 200
+```
+
+The product endpoint is untouched; the explanation surface is gone, and gone
+without advertising that it was ever there.
+
+### Experiment 20 — Try to script-inject the console
+
+Paste this as the question and run it:
+
+```
+<img src=x onerror="document.title='PWNED'"> should I change my job?
+```
+
+The markup renders as text, `document.querySelectorAll('img').length` is `0`, and
+the title is unchanged. Then break it on purpose: change the `el()` helper's
+`text` branch from `textContent` to `innerHTML` and run it again — the title
+changes, and you have built the bug that the helper exists to prevent.
+
+### Experiment 21 — Watch a birth time delete six facts
+
+Run *"What should I focus on for my health?"* for **user_101**, then switch the
+picker to **user_103** and run it again:
+
+```
+user_101  7 items  211 tok  budget 900  HIGH    score 1.00
+user_103  4 items  106 tok  budget 320  MEDIUM  score 0.70
+          caps: Birth time cannot support house division...
+          reliability (6): Ascendant (Lagna), 1st, 6th, 7th, 10th, 11th House
+```
+
+The `reliability (6)` group in the excluded column is the whole argument for
+computing confidence from measurable factors: an unknown birth time does not make
+the answer *slightly worse*, it makes six specific claims unsound, and the
+console names all six.
+
+### Experiment 22 — Prove the console is only a viewer
+
+Open the **Raw payload** panel at the bottom of any run and search it for a
+number you saw higher up the page. Every one of them is in there. Then stop the
+service and re-run — the page renders nothing at all, because it invents
+nothing.
+
+---
+
+# The tools you now have
 
 ### `npm run eval`
 
@@ -930,6 +1262,18 @@ against the mock provider.
 
 Measures what the second safety layer adds, on a probe written for
 pattern-blindness. Refuses to report a lift when the calls are not landing.
+
+### `GET /console` — the debug console
+
+`npm start`, then <http://localhost:3000/console>. The whole engine decision,
+rendered: intent and how it was reached, the horizon and what it changed, every
+selected and excluded fact with its reason, the token accounting, the confidence
+factors, upstream health, and the exact prompt. Free — it drives
+`/debug/personalization`, which never calls a model — with generation available
+behind an explicit checkbox.
+
+The line to look at first is the grey "vs previous run" diff under the verdict
+cards: it is the one that shows the engine changing its mind.
 
 ### `npm run why -- "<question>"`
 
@@ -958,7 +1302,7 @@ you can see it happening.
 
 # If you are asked about this in an interview
 
-Six questions you should be able to answer cold.
+Eight questions you should be able to answer cold.
 
 **1. "Your safety layer reports 100%. How much do you trust that?"**
 Not much, and say so first. It is 100% against patterns tuned until it passed. A
@@ -995,8 +1339,20 @@ and real, but 37% of the calls failed on a free tier — so the honest position 
 that it ships behind a flag with a command that measures it on your provider and
 your traffic, not that it ships on.
 
-**7. "What would you do next?"**
-An LLM classifier as a second *safety* layer behind the deterministic one,
-measured before it is trusted — the same shape as the intent fallback, for the
-same reason: hand-written rules have a coverage ceiling that diligence does not
-remove. The held-out probe put a number on that ceiling: 43.8%.
+**7. "You built a debug console. What stops it from being a lie?"**
+Three things. It computes nothing — every number on the page is a field in the
+`/debug/personalization` payload, so it cannot drift from the engine without the
+engine changing. Every demo button carries a machine-checkable claim that the
+e2e suite asserts, so a chip that stops demonstrating what it says fails the
+build by name. And where the truth genuinely is not in the payload — a blocked
+question never reaches the fan-out in production, though the debug endpoint runs
+the plan anyway — the page says so in prose rather than letting a true set of
+numbers imply something false.
+
+**8. "What would you do next?"**
+Measure `SAFETY_LLM_SCREEN` on real quota, false-positive column first — it is
+the one feature here that ships unmeasured, and `npm run eval:safety-llm`
+refuses to report a lift when the calls are not landing. After that: transits
+(gochar), which is the largest missing piece of the domain model, and an
+LLM-as-judge pass on answer quality, which is the only dimension the golden eval
+does not touch at all.

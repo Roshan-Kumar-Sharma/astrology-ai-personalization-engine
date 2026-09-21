@@ -91,6 +91,8 @@ testing.
   `{ answer, confidence, sourcesUsed }`.
 - **`POST /debug/personalization`** — same pipeline, no LLM call, returns the
   engine's reasoning instead of prose.
+- **`GET /console`** — the debug console: one self-contained HTML page that
+  drives the debug endpoint and renders the whole decision. Free to run.
 - **`GET /health`** — liveness and cache stats.
 
 Plus a bundled mock of the four upstream services over real HTTP, so the whole

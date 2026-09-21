@@ -1,0 +1,866 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Naksh Context Engine — Debug Console</title>
+    <!--
+      One file, no build step, no framework, no CDN.
+
+      Everything on this page comes from POST /debug/personalization. Nothing is
+      recomputed here: if a number is shown, the engine produced it. That rule is
+      what stops the console from becoming a second, subtly different
+      implementation of the thing it is supposed to explain.
+
+      Note also that every value is written into the DOM with textContent, never
+      innerHTML. The question is user input and is echoed back in five places;
+      building the DOM node-by-node means a question containing markup renders as
+      text, by construction rather than by escaping discipline.
+    -->
+    <style>
+      :root {
+        --bg: #0d1117;
+        --panel: #151b23;
+        --panel-2: #1b2029;
+        --line: #2a313c;
+        --ink: #e6edf3;
+        --muted: #9198a1;
+        --accent: #6ea8fe;
+        --good: #3fb950;
+        --warn: #d29922;
+        --bad: #f85149;
+        --primary: #6ea8fe;
+        --secondary: #a78bfa;
+        --neutral: #6b7280;
+        --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+        --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+      @media (prefers-color-scheme: light) {
+        :root {
+          --bg: #f6f8fa;
+          --panel: #ffffff;
+          --panel-2: #f2f4f7;
+          --line: #d8dee4;
+          --ink: #1f2328;
+          --muted: #636c76;
+          --accent: #0969da;
+          --good: #1a7f37;
+          --warn: #9a6700;
+          --bad: #cf222e;
+          --primary: #0969da;
+          --secondary: #7c3aed;
+          --neutral: #6b7280;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font: 14px/1.5 var(--sans);
+      }
+      a { color: var(--accent); }
+      code, .mono { font-family: var(--mono); }
+
+      header {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: baseline;
+        justify-content: space-between;
+        padding: 14px 20px;
+        border-bottom: 1px solid var(--line);
+        background: var(--panel);
+      }
+      .brand { font-weight: 650; letter-spacing: -0.01em; }
+      .brand span { color: var(--muted); font-weight: 400; }
+      .env { display: flex; flex-wrap: wrap; gap: 6px; font-family: var(--mono); font-size: 12px; }
+
+      main { max-width: 1180px; margin: 0 auto; padding: 20px 20px 64px; }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 16px;
+        margin-bottom: 16px;
+      }
+      .panel > h2 {
+        margin: 0 0 4px;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+      .panel > .sub { margin: 0 0 14px; color: var(--muted); font-size: 12.5px; }
+
+      textarea, input[type="text"], select {
+        background: var(--panel-2);
+        color: var(--ink);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 9px 11px;
+        font: inherit;
+      }
+      textarea { width: 100%; resize: vertical; min-height: 68px; font-family: var(--mono); }
+      .composer-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 10px; }
+      .traits { color: var(--muted); font-size: 12.5px; font-family: var(--mono); }
+
+      button {
+        background: var(--accent);
+        color: #06101f;
+        border: 0;
+        border-radius: 8px;
+        padding: 9px 16px;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); font-weight: 500; }
+      button:disabled { opacity: 0.55; cursor: progress; }
+      .actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 10px; }
+      .actions label { color: var(--muted); display: flex; gap: 6px; align-items: center; }
+
+      .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+      .chip {
+        background: var(--panel-2);
+        border: 1px solid var(--line);
+        color: var(--ink);
+        border-radius: 999px;
+        padding: 5px 12px;
+        font-size: 12.5px;
+        font-weight: 500;
+        cursor: pointer;
+      }
+      .chip:hover { border-color: var(--accent); }
+      .chip-hint { min-height: 34px; margin: 8px 0 0; color: var(--muted); font-size: 12.5px; }
+
+      .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+      .card { background: var(--panel-2); border: 1px solid var(--line); border-radius: 9px; padding: 11px 13px; }
+      .card .k { font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
+      .card .v { font-size: 19px; font-weight: 650; font-family: var(--mono); margin: 3px 0 2px; }
+      .card .s { font-size: 12px; color: var(--muted); }
+      .card.good { border-color: color-mix(in srgb, var(--good) 45%, var(--line)); }
+      .card.warn { border-color: color-mix(in srgb, var(--warn) 55%, var(--line)); }
+      .card.bad  { border-color: color-mix(in srgb, var(--bad) 55%, var(--line)); }
+      .v.good { color: var(--good); } .v.warn { color: var(--warn); } .v.bad { color: var(--bad); }
+
+      .two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      @media (max-width: 860px) { .two { grid-template-columns: 1fr; } }
+
+      .item { border-top: 1px solid var(--line); padding: 10px 0; }
+      .item:first-of-type { border-top: 0; }
+      .item .head { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+      .item .label { font-weight: 600; }
+      .item .id { font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+      .item .why { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+      .item .text { font-family: var(--mono); font-size: 12.5px; margin-top: 5px; color: var(--ink); opacity: 0.92; }
+      .bar { height: 4px; border-radius: 3px; background: var(--line); margin-top: 6px; overflow: hidden; }
+      .bar > i { display: block; height: 100%; background: var(--accent); }
+
+      .tag {
+        font-family: var(--mono);
+        font-size: 11px;
+        padding: 1px 7px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        color: var(--muted);
+        white-space: nowrap;
+      }
+      .tag.primary { color: var(--primary); border-color: color-mix(in srgb, var(--primary) 45%, var(--line)); }
+      .tag.secondary { color: var(--secondary); border-color: color-mix(in srgb, var(--secondary) 45%, var(--line)); }
+      .tag.good { color: var(--good); border-color: color-mix(in srgb, var(--good) 45%, var(--line)); }
+      .tag.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, var(--line)); }
+      .tag.bad { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, var(--line)); }
+
+      .group-title { font-size: 12px; color: var(--muted); margin: 14px 0 2px; font-weight: 600; }
+      .group-why { font-size: 12px; color: var(--muted); opacity: 0.85; margin-bottom: 4px; }
+      .excl { display: flex; gap: 8px; padding: 4px 0; font-size: 12.5px; border-top: 1px solid var(--line); }
+      .excl .label { min-width: 150px; }
+      .excl .detail { color: var(--muted); }
+
+      table { width: 100%; border-collapse: collapse; font-size: 13px; }
+      th { text-align: left; font-weight: 600; color: var(--muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em; }
+      td, th { padding: 6px 8px 6px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+      td.num { font-family: var(--mono); text-align: right; white-space: nowrap; }
+
+      pre {
+        background: var(--panel-2);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 12px;
+        overflow: auto;
+        max-height: 460px;
+        font-size: 12.5px;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      .banner { border-radius: 8px; padding: 11px 13px; margin-bottom: 12px; font-size: 13px; }
+      .banner.bad { background: color-mix(in srgb, var(--bad) 14%, transparent); border: 1px solid var(--bad); }
+      .banner.warn { background: color-mix(in srgb, var(--warn) 14%, transparent); border: 1px solid var(--warn); }
+      .banner.good { background: color-mix(in srgb, var(--good) 12%, transparent); border: 1px solid var(--good); }
+      .banner b { display: block; margin-bottom: 3px; }
+      ul.tight { margin: 4px 0 0; padding-left: 18px; }
+      ul.tight li { margin: 2px 0; }
+      .delta { font-size: 12.5px; color: var(--muted); margin-top: 10px; }
+      .delta .add { color: var(--good); }
+      .delta .rem { color: var(--bad); }
+      footer { color: var(--muted); font-size: 12.5px; text-align: center; padding: 10px 0 0; }
+      .hint { color: var(--muted); font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="brand">Naksh <span>· Context Engine debug console</span></div>
+      <div class="env" id="env"></div>
+    </header>
+
+    <main>
+      <section class="panel">
+        <div class="composer-row">
+          <label for="user" class="hint">User</label>
+          <select id="user"></select>
+          <input type="text" id="userCustom" placeholder="or any id" size="12" hidden />
+          <span class="traits" id="traits"></span>
+          <span class="hint" id="traitsNote"></span>
+        </div>
+        <textarea id="question" spellcheck="false" placeholder="Ask the engine something…"></textarea>
+        <div class="actions">
+          <button id="run">Explain</button>
+          <span class="hint">⌘/Ctrl + Enter</span>
+          <label title="Runs POST /personalize as well. This one calls the model.">
+            <input type="checkbox" id="generate" /> also write the answer <span class="tag warn">spends tokens</span>
+          </label>
+          <button class="ghost" id="curl" hidden>Copy as curl</button>
+          <span class="hint" id="status"></span>
+        </div>
+        <div class="chips" id="presets"></div>
+        <p class="chip-hint" id="chipHint"></p>
+      </section>
+
+      <div id="error"></div>
+      <section id="results" hidden></section>
+
+      <footer>
+        Everything here comes from <code>POST /debug/personalization</code> — the same code path
+        <code>/personalize</code> takes, minus generation.
+      </footer>
+    </main>
+
+    <script>
+      'use strict';
+
+      // --- tiny DOM helpers ------------------------------------------------
+      // el() only ever sets textContent, so payload strings can never be parsed
+      // as markup. See the comment at the top of the file.
+      function el(tag, attrs, children) {
+        const node = document.createElement(tag);
+        if (attrs) {
+          for (const [k, v] of Object.entries(attrs)) {
+            if (v === undefined || v === null || v === false) continue;
+            if (k === 'text') node.textContent = String(v);
+            else if (k === 'class') node.className = v;
+            else if (k === 'style') node.setAttribute('style', v);
+            else if (k.startsWith('on')) node.addEventListener(k.slice(2), v);
+            else node.setAttribute(k, String(v));
+          }
+        }
+        for (const c of [].concat(children || [])) {
+          if (c === null || c === undefined || c === false) continue;
+          node.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+        }
+        return node;
+      }
+      const $ = (sel) => document.querySelector(sel);
+      const pct = (n) => Math.round(n * 100) + '%';
+
+      function panel(title, sub, children) {
+        return el('section', { class: 'panel' }, [
+          el('h2', { text: title }),
+          sub ? el('p', { class: 'sub', text: sub }) : null,
+        ].concat(children || []));
+      }
+
+      function card(k, v, s, tone) {
+        return el('div', { class: 'card' + (tone ? ' ' + tone : '') }, [
+          el('div', { class: 'k', text: k }),
+          el('div', { class: 'v' + (tone ? ' ' + tone : ''), text: v }),
+          s ? el('div', { class: 's', text: s }) : null,
+        ]);
+      }
+
+      function bar(fraction, color) {
+        const pctWidth = Math.max(0, Math.min(1, fraction)) * 100;
+        const fill = color === 'hatched'
+          ? 'repeating-linear-gradient(90deg,var(--muted) 0 3px,transparent 3px 8px)'
+          : color;
+        return el('div', { class: 'bar' }, [
+          el('i', { style: 'width:' + pctWidth + '%' + (fill ? ';background:' + fill : '') }),
+        ]);
+      }
+
+      // --- state -----------------------------------------------------------
+      let boot = null;
+      let previous = null; // the run before this one, for the delta line
+      let current = null;
+
+      // Why each exclusion code exists, in one line. The payload gives the code
+      // and a per-item detail; this is the vocabulary lesson around it.
+      const REASONS = {
+        'rule:excluded': 'Named in the intent rule’s exclude list. Wrong topic for this question.',
+        'rule:horizon-drop': 'Dropped by the time horizon: this fact cannot speak to that span at all.',
+        'rule:below-threshold': 'Scored too low to be worth its tokens for this intent.',
+        budget: 'Relevant, but the context budget was already spent on better-scoring items.',
+        reliability: 'Unsound for this chart — e.g. a house claim on an unknown birth time.',
+        unavailable: 'Not available: the upstream failed, or a derived fact already states it in fuller form.',
+      };
+
+      // --- boot ------------------------------------------------------------
+      async function init() {
+        try {
+          boot = await (await fetch('/console/bootstrap')).json();
+        } catch {
+          boot = { users: [], presets: [], llm: {}, flags: {}, budgets: {} };
+        }
+        renderEnv();
+        renderUsers();
+        renderPresets();
+
+        const params = new URLSearchParams(location.search);
+        if (params.get('user')) selectUser(params.get('user'));
+        if (params.get('q')) $('#question').value = params.get('q');
+        if (params.get('q')) run();
+        else if (boot.presets && boot.presets.length) applyPreset(boot.presets[0], false);
+      }
+
+      function renderEnv() {
+        const env = $('#env');
+        env.replaceChildren();
+        const provider = (boot.llm && boot.llm.provider) || 'unknown';
+        // The provider is in the header for a reason: when a real provider fails
+        // this service falls back to a deterministic local one that produces
+        // fluent, chart-shaped prose. "It read well" is not evidence of a live
+        // model, so the configured provider is always on screen.
+        env.append(
+          el('span', {
+            class: 'tag ' + (provider === 'mock' ? 'warn' : 'good'),
+            title: (boot.llm && boot.llm.model) || '',
+            text: 'llm: ' + provider + (boot.llm && boot.llm.model ? ' · ' + boot.llm.model : ''),
+          }),
+          el('span', {
+            class: 'tag ' + (boot.mockUpstream ? 'warn' : ''),
+            title: boot.mockUpstream
+              ? 'This process is serving the bundled fixtures itself.'
+              : 'Upstreams are external. The ids in the picker are bundled fixtures and may not exist there.',
+            text: 'upstream: ' + (boot.mockUpstream ? 'bundled mock' : 'external'),
+          }),
+        );
+        for (const [name, value] of Object.entries(boot.flags || {})) {
+          if (typeof value !== 'boolean') continue;
+          env.append(
+            el('span', { class: 'tag ' + (value ? 'good' : ''), text: name + ': ' + (value ? 'on' : 'off') }),
+          );
+        }
+      }
+
+      function renderUsers() {
+        const sel = $('#user');
+        sel.replaceChildren();
+        for (const u of boot.users || []) {
+          sel.append(el('option', { value: u.id, text: u.id + ' · ' + u.name }));
+        }
+        sel.append(el('option', { value: '__custom', text: 'other…' }));
+        if (!boot.mockUpstream) {
+          // Say it plainly rather than hiding the list: these ids are bundled
+          // fixtures, and this process is not the thing serving the upstreams.
+          $('#traitsNote').textContent =
+            'Upstreams are external — these fixture ids may not exist there. Type any id.';
+        }
+        sel.addEventListener('change', onUserChange);
+        $('#userCustom').addEventListener('input', () => ($('#traits').textContent = ''));
+        onUserChange();
+      }
+
+      function onUserChange() {
+        const custom = $('#user').value === '__custom';
+        $('#userCustom').hidden = !custom;
+        const u = (boot.users || []).find((x) => x.id === $('#user').value);
+        $('#traits').textContent = u
+          ? [u.subscription, u.language, u.tone, 'birth time: ' + u.birthTime].join(' · ')
+          : '';
+      }
+
+      function selectUser(id) {
+        if ((boot.users || []).some((u) => u.id === id)) {
+          $('#user').value = id;
+        } else {
+          $('#user').value = '__custom';
+          $('#userCustom').value = id;
+        }
+        onUserChange();
+      }
+
+      function currentUserId() {
+        return $('#user').value === '__custom' ? $('#userCustom').value.trim() : $('#user').value;
+      }
+
+      function renderPresets() {
+        const row = $('#presets');
+        row.replaceChildren();
+        for (const p of boot.presets || []) {
+          row.append(
+            el('button', {
+              class: 'chip',
+              text: p.label,
+              onclick: () => applyPreset(p, true),
+              onmouseenter: () => ($('#chipHint').textContent = p.demonstrates),
+              onfocus: () => ($('#chipHint').textContent = p.demonstrates),
+            }),
+          );
+        }
+      }
+
+      function applyPreset(p, go) {
+        selectUser(p.userId);
+        $('#question').value = p.question;
+        $('#chipHint').textContent = p.demonstrates;
+        if (go) run();
+      }
+
+      // --- run -------------------------------------------------------------
+      async function run() {
+        const userId = currentUserId();
+        const question = $('#question').value.trim();
+        if (!userId || !question) return;
+
+        $('#run').disabled = true;
+        $('#status').textContent = 'running…';
+        $('#error').replaceChildren();
+        history.replaceState(null, '', '?user=' + encodeURIComponent(userId) + '&q=' + encodeURIComponent(question));
+
+        const started = performance.now();
+        try {
+          const explainRes = await post('/debug/personalization', { userId, question });
+          let generated = null;
+          if ($('#generate').checked) {
+            $('#status').textContent = 'calling the model…';
+            generated = await post('/personalize', { userId, question, verbose: true });
+          }
+          const roundTrip = Math.round(performance.now() - started);
+          previous = current;
+          current = { explainRes, generated, userId, question };
+          render(current, roundTrip);
+          $('#status').textContent = roundTrip + ' ms round trip';
+        } catch (err) {
+          showError(err);
+          $('#status').textContent = '';
+        } finally {
+          $('#run').disabled = false;
+          $('#curl').hidden = false;
+        }
+      }
+
+      async function post(path, body) {
+        const res = await fetch(path, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const msg = [].concat(json.message || json.error || res.statusText).join(', ');
+          throw new Error('HTTP ' + res.status + ' — ' + msg);
+        }
+        return json;
+      }
+
+      function showError(err) {
+        $('#error').replaceChildren(
+          el('div', { class: 'banner bad' }, [
+            el('b', { text: 'Request failed' }),
+            el('span', { text: String((err && err.message) || err) }),
+          ]),
+        );
+      }
+
+      // --- render ----------------------------------------------------------
+      function render(run, roundTrip) {
+        const d = run.explainRes;
+        const e = d.explain;
+        const out = $('#results');
+        out.hidden = false;
+        out.replaceChildren();
+
+        out.append(verdict(d, e, roundTrip));
+        if (run.generated) out.append(answerPanel(run.generated));
+        out.append(safetyPanel(e));
+        out.append(contextPanel(d, e));
+        out.append(budgetPanel(e));
+        out.append(confidencePanel(e));
+        out.append(healthPanel(e));
+        out.append(promptPanel(e));
+        out.append(rawPanel(d));
+        out.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+
+      function verdict(d, e, roundTrip) {
+        const conf = e.projectedConfidence;
+        const tone = conf.label === 'HIGH' ? 'good' : conf.label === 'MEDIUM' ? 'warn' : 'bad';
+        const blocked = e.safety.blocked;
+        const cards = el('div', { class: 'cards' }, [
+          card('Intent', e.intentDetection.intent,
+            e.intentDetection.method + ' · ' + e.intentDetection.confidence.toFixed(2)),
+          card('Horizon', e.timeHorizon.horizon, d.selectedContext.length + ' items selected'),
+          card('Style', d.language + ' · ' + d.tone,
+            e.responseStyle.tier + ' · ≤' + e.responseStyle.maxWords + ' words · ' + e.responseStyle.jargonLevel),
+          card('Confidence', conf.label, 'score ' + conf.score.toFixed(2) +
+            (conf.caps.length ? ' · ' + conf.caps.length + ' cap' + (conf.caps.length > 1 ? 's' : '') : ''), tone),
+          card('Safety', blocked ? 'BLOCKED' : e.safety.policies.length ? 'CONSTRAINED' : 'clear',
+            e.safety.policies.length ? e.safety.policies.join(', ') : 'no policy matched',
+            blocked ? 'bad' : e.safety.policies.length ? 'warn' : 'good'),
+          card('Prompt', e.tokenBudget.promptTokens.total + ' tok',
+            e.tokenBudget.contextTokensUsed + ' context / ' + e.tokenBudget.budget + ' budget'),
+          card('Engine', e.latency.totalMs + ' ms', roundTrip ? roundTrip + ' ms round trip' : ''),
+        ]);
+
+        const parts = [cards];
+        if (e.notes && e.notes.length) {
+          parts.push(el('ul', { class: 'tight', style: 'margin-top:12px' },
+            e.notes.map((n) => el('li', { class: 'hint', text: n }))));
+        }
+        const delta = deltaLine(e);
+        if (delta) parts.push(delta);
+        return panel('Verdict', e.intentDetection.rule, parts);
+      }
+
+      // "Change something and watch it move" only works if the movement is
+      // pointed at. This diffs the whole ledger against the previous run.
+      //
+      // Diffing only the selected set is not enough, and the first version of
+      // this page proved it: moving a career question from "this month" to "the
+      // next few months" selects exactly the same ten items, so the page said
+      // "no change" while the engine had in fact changed its mind about the
+      // panchang - from "scored below the relevance floor" to "dropped by the
+      // horizon". The reason an item is out is as much a decision as whether it
+      // is out, so both are diffed.
+      function ledgerState(e) {
+        const m = new Map();
+        for (const i of e.selected) m.set(i.id, { label: i.label, state: 'selected' });
+        for (const x of e.excluded) m.set(x.id, { label: x.label, state: x.reason });
+        return m;
+      }
+
+      function deltaLine(e) {
+        if (!previous) return null;
+        const before = ledgerState(previous.explainRes.explain);
+        const after = ledgerState(e);
+        const added = [];
+        const removed = [];
+        const rekeyed = [];
+        for (const [id, now] of after) {
+          const was = before.get(id);
+          if (!was || was.state === now.state) continue;
+          if (now.state === 'selected') added.push(now.label);
+          else if (was.state === 'selected') removed.push(now.label + ' (' + now.state + ')');
+          else rekeyed.push(now.label + ': ' + was.state + ' \u2192 ' + now.state);
+        }
+        const diff = e.tokenBudget.contextTokensUsed -
+          previous.explainRes.explain.tokenBudget.contextTokensUsed;
+
+        if (!added.length && !removed.length && !rekeyed.length && diff === 0) {
+          return el('p', { class: 'delta', text: 'Identical ledger to the previous run.' });
+        }
+        const line = el('p', { class: 'delta' }, [el('span', { text: 'vs previous run: ' })]);
+        if (added.length) line.append(el('span', { class: 'add', text: '+' + added.join('  +') + '  ' }));
+        if (removed.length) line.append(el('span', { class: 'rem', text: '\u2212' + removed.join('  \u2212') + '  ' }));
+        line.append(el('span', { text: '(' + (diff >= 0 ? '+' : '') + diff + ' context tokens)' }));
+        if (rekeyed.length) {
+          line.append(el('span', { text: ' \u00b7 same item, different reason: ' + rekeyed.join('; ') }));
+        }
+        return line;
+      }
+
+      function answerPanel(gen) {
+        const meta = gen.meta || {};
+        const llm = meta.llm || {};
+        const kids = [];
+        if (llm.degraded) {
+          // The single most important thing this page can say. A failed provider
+          // returns plausible prose from the local fallback; without this banner
+          // the text below would read as a live model answer.
+          kids.push(el('div', { class: 'banner bad' }, [
+            el('b', { text: 'Degraded: this answer came from the local fallback provider, not from ' + (boot.llm.provider || 'the model') + '.' }),
+            el('span', { text: 'Do not read it as evidence about the configured model.' }),
+          ]));
+        }
+        // Groundedness is verified against what was actually sent, so anything
+        // listed here was invented by the model by construction.
+        const g = meta.groundedness;
+        const invented = g ? [].concat(g.ungroundedEntities || [], g.fabricatedIds || []) : [];
+        if (invented.length || (g && g.contractIgnored)) {
+          kids.push(el('div', { class: 'banner warn' }, [
+            el('b', { text: g.contractIgnored
+              ? 'The model ignored the JSON contract; the answer was recovered as raw text.'
+              : invented.length + ' claim(s) in this answer were not in the context sent' }),
+            el('span', { text: invented.length ? invented.join(', ') : 'Citations could not be verified.' }),
+          ]));
+        }
+        kids.push(el('pre', { text: gen.answer }));
+        kids.push(el('p', { class: 'hint', text:
+          'confidence ' + gen.confidence +
+          ' · provider ' + (llm.provider || '?') + (llm.model ? ' (' + llm.model + ')' : '') +
+          (llm.usage ? ' · ' + llm.usage.inputTokens + ' in / ' + llm.usage.outputTokens + ' out' : '') +
+          (meta.groundedness ? ' · groundedness ' + meta.groundedness.score.toFixed(2) : '') +
+          ' · sources: ' + (gen.sourcesUsed || []).join(', ') }));
+        return panel('Generated answer', 'POST /personalize — this one spent tokens.', kids);
+      }
+
+      function safetyPanel(e) {
+        const s = e.safety;
+        const kids = [];
+        if (s.blocked) {
+          kids.push(el('div', { class: 'banner bad' }, [
+            el('b', { text: 'Blocked before any upstream call or token was spent — ' + s.policies.join(', ') }),
+            el('ul', { class: 'tight' }, s.rationale.map((r) => el('li', { text: r }))),
+          ]));
+          if (s.escalateToHuman) {
+            kids.push(el('p', { class: 'hint', text: 'Escalated: the user is offered a human astrologer.' }));
+          }
+          // Without this the page misrepresents production. /debug runs the plan
+          // for a blocked question so you can see what was withheld; the real
+          // endpoint returns the refusal before any of it happens.
+          kids.push(el('p', { class: 'hint', text:
+            'What /personalize would do: return the fixed refusal immediately \u2014 no upstream fan-out, ' +
+            'no model call, no tokens. The ledger, prompt and confidence below are what this request ' +
+            'would have produced had it been allowed; /debug/personalization builds them anyway so the ' +
+            'refusal can be inspected rather than taken on trust.' }));
+        } else if (s.policies.length) {
+          kids.push(el('div', { class: 'banner warn' }, [
+            el('b', { text: 'Answered under constraint — ' + s.policies.join(', ') }),
+            el('ul', { class: 'tight' }, s.rationale.map((r) => el('li', { text: r }))),
+          ]));
+        } else {
+          kids.push(el('div', { class: 'banner good' }, [
+            el('b', { text: 'No policy matched.' }),
+            el('span', { text: 'The baseline constraints below are injected into every prompt regardless.' }),
+          ]));
+        }
+        if (s.injectedConstraints && s.injectedConstraints.length) {
+          kids.push(el('div', { class: 'group-title', text: 'Constraints injected into the system prompt' }));
+          kids.push(el('ul', { class: 'tight' }, s.injectedConstraints.map((c) => el('li', { text: c }))));
+        }
+        return panel('Safety', 'Decided before the fan-out, from the policy table — not asked of the model.', kids);
+      }
+
+      function contextPanel(d, e) {
+        const selected = el('div', {}, [
+          el('div', { class: 'group-title', text: 'Selected — ' + e.selected.length + ' items, ' + e.tokenBudget.contextTokensUsed + ' tokens' }),
+        ]);
+        const before = previous ? new Set(previous.explainRes.explain.selected.map((i) => i.id)) : null;
+        const maxScore = Math.max(1, ...e.selected.map((i) => i.score));
+        for (const i of e.selected) {
+          selected.append(el('div', { class: 'item' }, [
+            el('div', { class: 'head' }, [
+              el('span', { class: 'label', text: i.label }),
+              el('span', { class: 'tag ' + i.tier, text: i.tier }),
+              el('span', { class: 'tag', text: i.source }),
+              el('span', { class: 'id', text: i.id }),
+              el('span', { class: 'id', text: i.score + ' · ' + i.tokens + ' tok' }),
+              before && !before.has(i.id) ? el('span', { class: 'tag good', text: 'new' }) : null,
+            ]),
+            bar(i.score / maxScore, i.tier === 'primary' ? 'var(--primary)' : i.tier === 'secondary' ? 'var(--secondary)' : 'var(--neutral)'),
+            el('div', { class: 'why', text: i.why }),
+            el('div', { class: 'text', text: i.text }),
+          ]));
+        }
+
+        const groups = new Map();
+        for (const x of e.excluded) {
+          if (!groups.has(x.reason)) groups.set(x.reason, []);
+          groups.get(x.reason).push(x);
+        }
+        const order = ['rule:excluded', 'rule:horizon-drop', 'rule:below-threshold', 'budget', 'reliability', 'unavailable'];
+        const excluded = el('div', {}, [
+          el('div', { class: 'group-title', text: 'Excluded — ' + e.excluded.length + ' items' }),
+        ]);
+        for (const reason of order) {
+          const items = groups.get(reason);
+          if (!items) continue;
+          excluded.append(el('div', { class: 'group-title', text: reason + ' (' + items.length + ')' }));
+          excluded.append(el('div', { class: 'group-why', text: REASONS[reason] || '' }));
+          for (const x of items) {
+            excluded.append(el('div', { class: 'excl' }, [
+              el('span', { class: 'label', text: x.label }),
+              el('span', { class: 'detail', text: x.detail }),
+            ]));
+          }
+        }
+
+        return panel(
+          'Context ledger',
+          (e.safety.blocked ? 'Nothing here was sent \u2014 the question was refused. This is what it would have used. ' : '') +
+            'Every candidate fact, and why it was or was not sent. Excluded items are absent from the prompt entirely, not ranked lower.',
+          [el('div', { class: 'two' }, [selected, excluded])],
+        );
+      }
+
+      function budgetPanel(e) {
+        const t = e.tokenBudget;
+        const max = Math.max(t.budget, t.contextTokensAvailable, t.naiveRawJsonDumpTokens, 1);
+        const rows = [
+          ['Context sent', t.contextTokensUsed, 'var(--accent)'],
+          ['All candidates built', t.contextTokensAvailable, 'var(--neutral)'],
+          ['Naive raw-JSON dump', t.naiveRawJsonDumpTokens, 'var(--warn)'],
+          ['Budget ceiling', t.budget, 'hatched'],
+        ];
+        const table = el('div', {});
+        for (const [name, value, color] of rows) {
+          table.append(el('div', { style: 'margin:8px 0' }, [
+            el('div', { class: 'head', style: 'display:flex;justify-content:space-between' }, [
+              el('span', { text: name }),
+              el('span', { class: 'mono', text: value + ' tok' }),
+            ]),
+            bar(value / max, color),
+          ]));
+        }
+
+        const saved = t.savedPct;
+        const vsNaive = t.vsNaiveDumpPct;
+        const honest = vsNaive < 0
+          ? 'This prompt is ' + Math.abs(vsNaive) + '% larger than dumping all four raw payloads. ' +
+            'The engine does not win by sending fewer tokens — it wins by sending different ones: ' +
+            'the budget goes on derived conclusions the raw JSON does not contain.'
+          : vsNaive + '% smaller than dumping all four raw payloads.';
+
+        const promptRows = Object.entries(t.promptTokens).filter(([k]) => k !== 'total');
+        const breakdown = el('table', {}, [
+          el('tr', {}, [el('th', { text: 'Prompt section' }), el('th', { class: 'num', text: 'tokens' })]),
+        ].concat(promptRows.map(([k, v]) =>
+          el('tr', {}, [el('td', { text: k }), el('td', { class: 'num', text: String(v) })]),
+        )).concat([
+          el('tr', {}, [el('td', { text: 'total' }), el('td', { class: 'num', text: String(t.promptTokens.total) })]),
+        ]));
+
+        return panel('Token accounting', 'Selection dropped ' + saved + '% of the candidate set.', [
+          table,
+          el('p', { class: 'hint', text: honest }),
+          breakdown,
+        ]);
+      }
+
+      function confidencePanel(e) {
+        const c = e.projectedConfidence;
+        const rows = c.factors.map((f) =>
+          el('tr', {}, [
+            el('td', {}, [el('div', { text: f.name }), el('div', { class: 'hint', text: f.note })]),
+            el('td', { class: 'num', text: f.weight.toFixed(2) }),
+            el('td', { class: 'num', text: f.value.toFixed(2) }),
+            el('td', { class: 'num', text: (f.weight * f.value).toFixed(3) }),
+            el('td', { style: 'width:120px' }, [bar(f.value, f.value >= 0.8 ? 'var(--good)' : f.value >= 0.5 ? 'var(--warn)' : 'var(--bad)')]),
+          ]),
+        );
+        const kids = [
+          el('table', {}, [
+            el('tr', {}, ['Factor', 'weight', 'value', 'contribution', ''].map((h, idx) =>
+              el('th', { class: idx > 0 && idx < 4 ? 'num' : '', text: h }))),
+          ].concat(rows).concat([
+            el('tr', {}, [
+              el('td', { text: 'score' }),
+              el('td', {}), el('td', {}),
+              el('td', { class: 'num', text: c.score.toFixed(3) }),
+              el('td', { text: c.label }),
+            ]),
+          ])),
+        ];
+        if (c.caps.length) {
+          kids.push(el('div', { class: 'banner warn', style: 'margin-top:12px' }, [
+            el('b', { text: 'Hard caps applied' }),
+            el('ul', { class: 'tight' }, c.caps.map((x) => el('li', { text: x }))),
+          ]));
+        }
+        return panel(
+          'Confidence',
+          'Computed from measurable properties of the request. The model is never asked how confident it is.',
+          kids,
+        );
+      }
+
+      function healthPanel(e) {
+        const upstream = el('table', {}, [
+          el('tr', {}, ['Upstream', 'outcome', 'ms', 'attempts'].map((h, i) =>
+            el('th', { class: i > 1 ? 'num' : '', text: h }))),
+        ].concat(Object.entries(e.upstream).map(([name, r]) =>
+          el('tr', {}, [
+            el('td', { text: name }),
+            el('td', {}, [el('span', {
+              class: 'tag ' + (r.outcome === 'ok' || r.outcome === 'cached' ? 'good' : r.outcome === 'stale' ? 'warn' : 'bad'),
+              text: r.outcome + (r.error ? ' — ' + r.error : ''),
+            })]),
+            el('td', { class: 'num', text: r.latencyMs === undefined ? '—' : String(Math.round(r.latencyMs)) }),
+            el('td', { class: 'num', text: String(r.attempts) }),
+          ]),
+        )));
+
+        const spans = e.latency.spans || [];
+        const maxSpan = Math.max(1, ...spans.map((s) => s.ms));
+        const waterfall = el('table', {}, [
+          el('tr', {}, [el('th', { text: 'Stage' }), el('th', { class: 'num', text: 'ms' }), el('th', {})]),
+        ].concat(spans.map((s) =>
+          el('tr', {}, [
+            el('td', { text: s.name }),
+            el('td', { class: 'num', text: s.ms.toFixed(2) }),
+            el('td', { style: 'width:220px' }, [bar(s.ms / maxSpan)]),
+          ]),
+        )));
+
+        return panel('Upstream & latency', 'The four upstream calls run concurrently, so the stage times overlap.', [
+          el('div', { class: 'two' }, [upstream, waterfall]),
+          el('p', { class: 'hint', text: 'Chart reliability: birth time ' + e.chartReliability.birthTime +
+            ' · houses ' + (e.chartReliability.housesUsable ? 'usable' : 'suppressed') +
+            (e.chartReliability.inconsistencies.length ? ' · inconsistencies: ' + e.chartReliability.inconsistencies.join('; ') : '') }),
+        ]);
+      }
+
+      function promptPanel(e) {
+        const copy = el('button', {
+          class: 'ghost',
+          text: 'Copy prompt',
+          onclick: () => navigator.clipboard.writeText(e.promptPreview).then(() => (copy.textContent = 'Copied')),
+        });
+        return panel(
+          'The exact prompt',
+          e.safety.blocked
+            ? 'Never built in production either \u2014 a refused question does not reach the prompt builder.'
+            : 'Built but never sent \u2014 this is the text the model would have received.',
+          [copy, el('pre', { style: 'margin-top:10px', text: e.promptPreview })],
+        );
+      }
+
+      function rawPanel(d) {
+        const details = el('details', {}, [
+          el('summary', { class: 'hint', text: 'Raw /debug/personalization response' }),
+          el('pre', { style: 'margin-top:10px', text: JSON.stringify(d, null, 2) }),
+        ]);
+        return panel('Raw payload', 'Nothing on this page is computed here; it all comes from this object.', [details]);
+      }
+
+      // --- wiring ----------------------------------------------------------
+      $('#run').addEventListener('click', run);
+      $('#question').addEventListener('keydown', (ev) => {
+        if ((ev.metaKey || ev.ctrlKey) && ev.key === 'Enter') run();
+      });
+      $('#curl').addEventListener('click', () => {
+        const body = JSON.stringify({ userId: currentUserId(), question: $('#question').value.trim() });
+        const cmd =
+          "curl -s -X POST " + location.origin + "/debug/personalization \\\n" +
+          "  -H 'content-type: application/json' \\\n  -d '" + body.replace(/'/g, "'\\''") + "'";
+        navigator.clipboard.writeText(cmd).then(() => {
+          $('#curl').textContent = 'Copied';
+          setTimeout(() => ($('#curl').textContent = 'Copy as curl'), 1200);
+        });
+      });
+
+      init();
+    </script>
+  </body>
+</html>

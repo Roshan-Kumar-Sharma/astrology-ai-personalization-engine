@@ -3,6 +3,8 @@ import { Test } from '@nestjs/testing';
 import type { Server } from 'node:http';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
+import { CONSOLE_PRESETS } from '../src/api/console.presets';
+import { USERS } from '../src/upstream/mock/fixtures';
 import { APP_CONFIG, loadConfig } from '../src/common/config/app.config';
 import { StructuredLogger } from '../src/common/logging/logger';
 import { startMockUpstream } from '../src/upstream/mock/mock-upstream.server';
@@ -253,6 +255,99 @@ describe('Personalized AI Context Engine (e2e)', () => {
       expect(res.body.explain.tokenBudget.promptTokens.total).toBeGreaterThan(0);
       expect(res.body.explain.promptPreview).toContain('CONTEXT');
       expect(res.body.explain).not.toHaveProperty('answer');
+    });
+  });
+
+  /**
+   * The console is a viewer over `/debug/personalization`, so it needs almost no
+   * tests of its own. The exception is the preset list: those chips each make a
+   * claim about the engine in prose, and prose does not fail a build. Asserting
+   * the claims is what keeps the demo honest as the rules change.
+   */
+  describe('the debug console', () => {
+    it('serves a self-contained page', async () => {
+      const res = await request(app.getHttpServer()).get('/console').expect(200);
+      expect(res.headers['content-type']).toMatch(/text\/html/);
+      expect(res.text).toContain('debug console');
+      // No CDN, no build step, nothing fetched from the network: the page has to
+      // work offline and in a locked-down container.
+      expect(res.text).not.toMatch(/<script[^>]+src=/);
+      expect(res.text).not.toMatch(/<link[^>]+stylesheet/);
+    });
+
+    it('describes the running service rather than the one it was written against', async () => {
+      const res = await request(app.getHttpServer()).get('/console/bootstrap').expect(200);
+      expect(res.body.users.map((u: { id: string }) => u.id)).toContain('user_103');
+      expect(res.body.llm.provider).toBe('mock');
+      expect(res.body.flags).toHaveProperty('SAFETY_LLM_SCREEN');
+      expect(res.body.presets.length).toBe(CONSOLE_PRESETS.length);
+    });
+
+    it('only offers presets for users the fixtures actually have', () => {
+      for (const preset of CONSOLE_PRESETS) {
+        expect(Object.keys(USERS)).toContain(preset.userId);
+      }
+    });
+
+    describe('every preset still demonstrates what it claims', () => {
+      for (const preset of CONSOLE_PRESETS) {
+        it(preset.label, async () => {
+          const res = await post(
+            { userId: preset.userId, question: preset.question },
+            '/debug/personalization',
+          ).expect(200);
+          const e = res.body.explain;
+          const claim = preset.expect;
+          const selected: string = res.body.selectedContext.join(' ');
+
+          if (claim.intent) expect(e.intentDetection.intent).toBe(claim.intent);
+          if (claim.horizon) expect(e.timeHorizon.horizon).toBe(claim.horizon);
+          if (claim.blocked !== undefined) expect(e.safety.blocked).toBe(claim.blocked);
+          if (claim.policy) expect(e.safety.policies).toContain(claim.policy);
+          if (claim.language) expect(res.body.language).toBe(claim.language);
+          if (claim.housesUsed !== undefined) {
+            expect(/House|Lagna|Ascendant/.test(selected)).toBe(claim.housesUsed);
+          }
+          if (claim.panchangUsed !== undefined) {
+            expect(/Panchang|Tithi|Nakshatra|Yoga|Karana/.test(selected)).toBe(claim.panchangUsed);
+          }
+        });
+      }
+    });
+  });
+
+  describe('with DEBUG_ENDPOINTS_ENABLED=false', () => {
+    let offApp: INestApplication;
+
+    beforeAll(async () => {
+      const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+        .overrideProvider(APP_CONFIG)
+        .useValue(loadConfig({ ...TEST_ENV, DEBUG_ENDPOINTS_ENABLED: 'false' }))
+        .compile();
+      offApp = moduleRef.createNestApplication();
+      await offApp.init();
+    }, 20_000);
+
+    afterAll(async () => {
+      await offApp?.close();
+    });
+
+    it('takes the whole debug surface away, not just the page', async () => {
+      await request(offApp.getHttpServer()).get('/console').expect(404);
+      await request(offApp.getHttpServer()).get('/console/bootstrap').expect(404);
+      // The point of the flag: hiding the UI while leaving the JSON endpoint
+      // open would expose exactly the same data to anyone who reads the README.
+      await request(offApp.getHttpServer())
+        .post('/debug/personalization')
+        .send({ userId: 'user_101', question: 'How is my week?' })
+        .expect(404);
+    });
+
+    it('leaves the product endpoint alone', async () => {
+      await request(offApp.getHttpServer())
+        .post('/personalize')
+        .send({ userId: 'user_101', question: 'How is my week?' })
+        .expect(200);
     });
   });
 

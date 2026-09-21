@@ -14,6 +14,8 @@ import { GuardrailsService } from './safety/guardrails.service';
 import { LlmSafetyScreen } from './safety/llm-safety.screen';
 import { ContextAggregator } from './upstream/context-aggregator.service';
 import { UpstreamClient } from './upstream/upstream.client';
+import { ConsoleController } from './api/console.controller';
+import { DebugEnabledGuard } from './api/debug-enabled.guard';
 import { DebugController } from './api/debug.controller';
 import { PersonalizeController } from './api/personalize.controller';
 import { PersonalizeService } from './api/personalize.service';
@@ -29,7 +31,7 @@ import { HealthController } from './api/health.controller';
  */
 @Module({
   imports: [CoreModule, LlmModule],
-  controllers: [PersonalizeController, DebugController, HealthController],
+  controllers: [PersonalizeController, DebugController, ConsoleController, HealthController],
   providers: [
     // upstream
     UpstreamClient,
@@ -56,6 +58,7 @@ import { HealthController } from './api/health.controller';
 
     // orchestration
     PersonalizeService,
+    DebugEnabledGuard,
   ],
 })
 export class AppModule {}
