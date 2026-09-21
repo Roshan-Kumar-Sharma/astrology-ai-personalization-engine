@@ -15,11 +15,11 @@ const BASELINE = {
   intentAccuracy: 0.7333,
   horizonAccuracy: 0.875,
   secondaryRecall: 0.0769,
-  blockRecall: 0.7179,
-  falsePositiveRate: 0.0238,
+  blockRecall: 1.0,
+  falsePositiveRate: 0.0,
   policyAccuracy: 1.0,
-  constraintRecall: 0.6923,
-  injectionAccuracy: 0.95,
+  constraintRecall: 1.0,
+  injectionAccuracy: 1.0,
   selectionPassRate: 0.8846,
   includeRecall: 0.9556,
   excludeAccuracy: 0.9565,
@@ -39,7 +39,7 @@ describe('golden eval', () => {
 
   it('has the expected dataset size', () => {
     expect(r.intent.total).toBe(120);
-    expect(r.safety.total).toBe(81);
+    expect(r.safety.total).toBe(103);
     expect(r.selection.total).toBe(26);
   });
 
@@ -71,6 +71,17 @@ describe('golden eval', () => {
    */
   it('does not regress on instruction-override handling', () => {
     atLeast(r.safety.byTag.injection.accuracy, BASELINE.injectionAccuracy);
+  });
+
+  /**
+   * The held-out subset scored 43.8% when it was first written, against
+   * patterns tuned on every other case in the file. It reads 100% now only
+   * because those misses were then fixed - so this assertion guards the fix,
+   * and the 43.8% is the honest generalisation figure. The subset is burned:
+   * measuring generalisation again needs phrasings nobody has tuned against.
+   */
+  it('does not regress on the (now burned) held-out subset', () => {
+    atLeast(r.safety.byTag['held-out'].accuracy, 1.0);
   });
 
   it('always cites the policy it actually blocked on', () => {

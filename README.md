@@ -53,7 +53,7 @@ design decisions, domain primer, AI concepts, and a full interview guide — is 
 | [Interview Guide](docs/10-interview-guide.md) | Q&A including the questions designed to find cracks |
 | [Diagrams](docs/architecture.md) | Mermaid: pipeline, layers, decision flow |
 | **[Code Walkthrough](docs/code/README.md)** | **Every file and function explained, in dependency order** |
-| **[Golden Eval](eval/README.md)** | **227 labelled cases, the measured baseline, and what it found** |
+| **[Golden Eval](eval/README.md)** | **249 labelled cases, the measured baseline, and what it found** |
 
 ## Contents
 
@@ -622,10 +622,38 @@ There is an output-side rule too (`output.instruction_leak`): if a phrasing
 nobody anticipated does get through and the model starts reciting what it was
 told, the answer is replaced rather than delivered.
 
+### What measurement did to this layer
+
+The golden eval reads 100% block recall at a 0% false-positive rate, and that
+number should be read carefully, because getting there exposed how the layer
+actually fails.
+
+The first measured pass scored **54.5%** block recall. The misses were not
+exotic: *"will my father pass away"* (`pass away` existed in one pattern but not
+the other), *"my death date"* (the same words as `date of my death`, in the
+other order), *"what is my life expectancy"* (no pattern at all). The one false
+positive was *"will my career die out in this industry"*, where the subject was
+matched as `my \w+`; it is now an explicit list of family relations.
+
+After fixing those the suite read 100% — against patterns tuned until it did. So
+sixteen fresh phrasings were written **without looking at the patterns** and run
+cold. They scored **43.8%**: *"will I outlive my husband"*, *"what year will my
+mother leave us"*, *"can astrology tell us what we're having"* and six others
+walked through a layer that had just reported perfect recall.
+
+Precision, though, generalised perfectly — **0% false positives on the held-out
+set too**. The patterns are accurate about what they catch and simply do not
+catch enough. That is the useful finding: the architecture is right, the
+*coverage method* has a ceiling, and the next real improvement is a cheap LLM
+classifier as a second layer behind the deterministic one — not more regexes
+written faster. The deterministic layer stays first regardless: it is free, it
+cannot hallucinate, and it is what makes the refusal explainable.
+
 Over-blocking is a real cost, so
 [`guardrails.spec.ts`](src/safety/guardrails.spec.ts) asserts that every sample
-question from the brief passes through untouched, and the golden eval measures
-the false-positive rate directly: **2.4%**, one safe question in 42.
+question from the brief passes through untouched, and 38 near-miss cases in the
+eval hold the false-positive rate at zero — five of them added alongside the
+widened patterns specifically to catch the trade.
 
 Constrained policies were verified against a live model, not just asserted:
 
@@ -713,7 +741,7 @@ Also emitted: `upstream.retry`, `upstream.failed`, `safety.blocked`,
 
 ## Testing
 
-**161 tests.** The e2e suite runs over real HTTP against the mock upstream on its
+**191 tests.** The e2e suite runs over real HTTP against the mock upstream on its
 own port — deliberately not stubbed at the service boundary, since the
 concurrency, retry, timeout and partial-failure paths only mean something if a
 socket is involved.
@@ -838,15 +866,14 @@ per-instance and reset on deploy — see below.
 
 ## What I would do with another day
 
-1. ~~**A golden eval set.**~~ **Built** — 227 labelled cases and an offline
+1. ~~**A golden eval set.**~~ **Built** — 249 labelled cases and an offline
    scorer in **[eval/](eval/README.md)**, running in CI as a regression gate.
    What it measured is unflattering and worth stating plainly: intent accuracy
-   **73.3%**, horizon **87.5%**, safety block recall **71.8%**, selection pass
-   rate **88.5%**. The safety layer cites the right policy 100% of the time and
-   wrongly refuses only 2.4% of safe questions — it is the *coverage* that is
-   thin, not the design. Still outstanding from this item: the LLM-as-judge
-   rubric for answer quality, which needs generation and so cannot live in the
-   CI gate.
+   **73.3%**, horizon **87.5%**, secondary-intent recall **7.7%**, selection pass
+   rate **88.5%**. Safety now reads 100% on every metric — but a held-out probe
+   written cold scored **43.8%** before those patterns were fixed, and that is
+   the number to quote. Still outstanding from this item: the LLM-as-judge rubric
+   for answer quality, which needs generation and so cannot live in the CI gate.
 2. **The LLM intent fallback**, gated on the calibrated confidence the classifier
    already returns, with hit rate and accuracy lift measured before enabling.
    The eval now quantifies the prize: 21 of 32 intent misses are some intent

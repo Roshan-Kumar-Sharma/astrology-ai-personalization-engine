@@ -73,6 +73,19 @@ const CRISIS_RESPONSE = [
   "You're welcome to come back and ask me anything about your chart whenever you'd like. Right now, talking to a person matters more.",
 ].join('\n');
 
+/**
+ * Who a longevity question can be *about*.
+ *
+ * The obvious shortcut is `my \w+`, and it is wrong in a way that only showed
+ * up under measurement: it matches "will my career die out in this industry",
+ * an ordinary career question, and that was the single false positive in the
+ * whole golden eval. Naming the relations costs one long line and removes the
+ * entire class.
+ */
+const PERSON = String.raw`(?:i|he|she|they|my\s+(?:mother|father|mom|mum|mummy|maa|dad|papa|son|daughter|child|baby|kid|husband|wife|spouse|partner|brother|sister|bhai|behen|friend|grand(?:father|mother|pa|ma)|dada|dadi|nana|nani|uncle|aunt|in-?law))`;
+
+const person = (body: string) => new RegExp(body.replace(/PERSON/g, PERSON), 'i');
+
 export const RISK_POLICIES: RiskPolicy[] = [
   {
     id: 'crisis_self_harm',
@@ -87,10 +100,24 @@ export const RISK_POLICIES: RiskPolicy[] = [
       /\bdon'?t\s+want\s+to\s+(live|be\s+alive)\b/i,
       /\bno\s+(point|reason)\s+(in\s+)?living\b/i,
       /\b(harm|hurt|cut)\s+myself\b/i,
+      // Indirect phrasing, which is how this usually actually arrives. The
+      // lookahead is load-bearing: without it, "any point in carrying on with
+      // this course" reads as crisis language.
+      /\b(any|no)\s+(point|reason)\s+(in\s+|of\s+)?(going\s+on|carrying\s+on|living|being\s+here)\b(?!\s+(?:with|in|at|for|as)\s)/i,
+      /\bwhat'?s\s+the\s+point\s+(in\s+|of\s+)?(going\s+on|carrying\s+on|living)\b/i,
+      /\bend(ing)?\s+it\s+all\b/i,
+      /\b(don'?t|do\s+not)\s+want\s+to\s+(be\s+here|wake\s+up|go\s+on)\b/i,
+      /\bbetter\s+off\s+without\s+me\b/i,
+      /\b(stopped|stop)\s+seeing\s+the\s+point\b/i,
+      /\bjeene\s+ka\s+(koi\s+)?(matlab|faida|maqsad|sense)\s+nahi/i,
       /\bkhudkushi\b/i,
       /\baatmahatya\b/i,
-      /\bjeena\s+nahi\s+chahta\b/i,
-      /आत्महत्या|खुदकुशी/,
+      /\bjeena\s+nahi?n?\s+chahta\b/i,
+      // Hindi/Hinglish: "apni jaan dena" (to take one's own life) is the
+      // ordinary way this is said, and transliteration varies.
+      /\b(apni\s+)?jaan\s+(dena|de\s+d(o|u)n|deni|lena)\b/i,
+      /\bmarna\s+chahta\s+h(oon|u|un)\b/i,
+      /आत्महत्या|खुदकुशी|जान\s*दे/,
     ],
     blockResponse: CRISIS_RESPONSE,
   },
@@ -101,9 +128,21 @@ export const RISK_POLICIES: RiskPolicy[] = [
     rationale:
       'Prenatal sex determination is a criminal offence in India under the PCPNDT Act, 1994. Astrological framing does not exempt it, and a consumer astrology app is a realistic place for the question to be asked.',
     patterns: [
-      /\b(boy|girl|male|female|beta|beti|ladka|ladki)\b[^?]{0,40}\b(baby|child|pregnan\w+|garbh\w*|womb)\b/i,
-      /\b(baby|child|pregnan\w+|garbh\w*)\b[^?]{0,40}\b(boy|girl|male|female|gender|sex|beta|beti|ladka|ladki)\b/i,
+      /\b(boy|girl|male|female|beta|beti|ladka|ladki)\b[^?]{0,60}\b(baby|child|pregnan\w+|garbh\w*|womb|expecting|unborn)\b/i,
+      // `son|daughter` appear in this direction only. Forward, they would fire
+      // on "my son is expecting his first child" - a grandparent asking an
+      // ordinary question - because the sex term precedes the pregnancy term.
+      /\b(baby|child|pregnan\w+|garbh\w*|expecting|unborn)\b[^?]{0,60}\b(boy|girl|male|female|son|daughter|gender|sex|beta|beti|ladka|ladki)\b/i,
       /\bgender\s+of\s+(my|the)\s+(baby|child|unborn)\b/i,
+      // The bare phrasing carries no other realistic reading in this product,
+      // and requiring a pregnancy noun is what let it through before.
+      /\bis\s+it\s+a\s+(boy|girl|ladka|ladki)\b/i,
+      /\b(boy|ladka)\s+or\s+(a\s+)?(girl|ladki)\b/i,
+      // "what we're having" names no sex term at all, which is exactly why it
+      // is used. Ultrasound is named because sex-selective scanning is the
+      // illegal act this policy exists to refuse an astrological proxy for.
+      /\bwhat\s+(we|i|she)\s+(are|am|is)\s+having\b/i,
+      /\bultrasound|sonograph\w+/i,
     ],
     blockResponse:
       "I can't help with predicting the sex of an unborn child. In India, prenatal sex determination is prohibited by law under the PCPNDT Act, and that applies to astrological predictions too.\n\nI'd genuinely love to help with what's underneath the question though — I can look at what your chart says about this period of family life, the timing indicated by your current dasha, or supportive practices for a healthy pregnancy. Just ask.",
@@ -116,10 +155,28 @@ export const RISK_POLICIES: RiskPolicy[] = [
     rationale:
       'Longevity prediction (marana / ayurdaya) is refused by responsible astrologers and is actively harmful in a self-service product with no human present.',
     patterns: [
-      /\bwhen\s+(will|would|am)\s+(i|he|she|they|my\s+\w+)\s+(die|pass\s+away)\b/i,
-      /\b(how\s+long|how\s+many\s+years)\s+(will|do)\s+(i|he|she|they|my\s+\w+)\s+(live|have\s+left)\b/i,
+      person(String.raw`\bwhen\s+(?:will|would|am)\s+PERSON\s+(?:die|pass\s+away)\b`),
+      // Indirect word order: "tell me when I will die". Subject before modal.
+      person(String.raw`\bwhen\s+PERSON\s+(?:will|would)\s+(?:die|pass\s+away)\b`),
+      person(
+        String.raw`\b(?:how\s+long|how\s+many\s+years|how\s+much\s+time)\s+(?:will|do)\s+PERSON\s+(?:live|have\s+left)\b`,
+      ),
+      person(
+        String.raw`\bwhat\s+(?:year|age|date)\s+(?:will|would)\s+PERSON\s+(?:die|pass\s+away|leave\s+us|pass\s+on)\b`,
+      ),
+      person(String.raw`\bwill\s+PERSON\s+(?:leave\s+us|pass\s+on)\b`),
+      // Comparative and descriptive forms, which never name death at all.
+      /\boutliv\w+/i,
+      /\b(a|my|his|her|their)\s+(short|long)\s+life\b/i,
+      person(String.raw`\bwill\s+PERSON\s+(?:die|pass\s+away)\b`),
       /\b(date|time|year)\s+of\s+(my|his|her|their)\s+death\b/i,
-      /\bwill\s+(i|he|she|they|my\s+\w+)\s+die\b/i,
+      // The same words in the other order - a possessive compound.
+      /\b(my|his|her|their)\s+death\s+(date|time|year)\b/i,
+      /\bpredict\s+(my|his|her|their)\s+death\b/i,
+      /\blife\s+expectancy\b/i,
+      // Scoped to the possessive: "the longevity of my marriage" is not this.
+      /\b(my|his|her|their)\s+(life\s?span|longevity)\b/i,
+      /\bayurdaya\b/i,
       /\bmrityu\s+(kab|yog)\b/i,
       /\bkab\s+maru?nga\b/i,
     ],
@@ -135,16 +192,18 @@ export const RISK_POLICIES: RiskPolicy[] = [
       'Diagnosis and cure prediction can delay real treatment. This is the highest-frequency dangerous question in astrology apps, and it arrives in endless phrasings, so it is matched as (medical subject + prognosis language) rather than as a fixed form.',
     patterns: [
       /\b(do|does)\s+(i|he|she|they)\s+have\s+(cancer|a\s+tumou?r|diabetes|a\s+disease|an?\s+illness)\b/i,
-      /\bshould\s+i\s+(stop|skip|avoid|delay)\s+(taking\s+)?(my\s+)?(medicine|medication|treatment|chemo\w*|surgery)\b/i,
+      // Up to three words between the possessive and the noun, so "my blood
+      // pressure medication" reads the same as "my medication".
+      /\bshould\s+i\s+(stop|skip|avoid|delay)\s+(taking\s+)?(my\s+)?(?:[\w-]+\s+){0,3}(medicine|medication|tablets?|pills?|treatment|chemo\w*|surgery|insulin|dialysis)\b/i,
       /\b(diagnose|diagnosis\s+of)\s+(my|me|his|her)\b/i,
       /\bwhat\s+(disease|illness|condition)\s+do\s+i\s+have\b/i,
     ],
     allOf: [
       [
-        /\b(cancer|tumou?r|diabet\w*|hiv|aids|stroke|paralysis|thyroid|asthma|epilep\w*|kidney|liver|cardiac|heart\s+(attack|disease|problem)|infection|disease|illness|surgery|operation|chemo\w*|dialysis|transplant|coma|coronary)\b/i,
+        /\b(cancer|tumou?r|diabet\w*|hiv|aids|stroke|paralysis|thyroid|asthma|epilep\w*|kidney|liver|cardiac|heart\s+(attack|disease|problem)|infection|disease|illness|surgery|operation|chemo\w*|dialysis|transplant|coma|coronary|leukaem?ia|lymphoma|carcinoma|melanoma|sclerosis|alzheimer\w*|parkinson\w*|dementia|diagnosed)\b/i,
       ],
       [
-        /\b(cure[ds]?|curable|heal(ed|ing)?|recover(y|ed|ing)?|surviv\w+|get\s+better|be\s+(ok|okay|alright|fine)|go\s+away|pull\s+through|make\s+it|succeed|successful|work\s+out|outcome|prognosis)\b/i,
+        /\b(cure[ds]?|curable|heal(ed|ing)?|recover(y|ed|ing)?|surviv\w+|get\s+better|be\s+(ok|okay|alright|fine)|go\s+away|pull\s+through|make\s+it|succeed|successful|work\s+out|outcome|prognosis|benign|malignant|terminal|operable|spread(ing)?|beat\s+it|fight\s+it|get\s+through)\b/i,
       ],
     ],
     blockResponse:
@@ -161,7 +220,10 @@ export const RISK_POLICIES: RiskPolicy[] = [
       /\b(vashikaran|black\s+magic|jadoo?\s?tona|kala\s+jadu|tantrik?\s+(remedy|solution))\b/i,
       /\bhow\s+(do|can)\s+i\s+(control|bind|force)\s+(him|her|them|my\s+\w+)\b/i,
       /\b(spell|ritual|mantra)\s+to\s+(make|force)\s+(him|her|them)\s+\w+/i,
-      /\b(curse|harm|destroy|ruin)\s+(him|her|them|my\s+enemy)\b/i,
+      // Bare verb forms only: "destroy" does not match "destroying", so
+      // "is my weak Saturn destroying my career" stays an ordinary question.
+      /\b(curse|harm|destroy|ruin)\s+(him|her|them|the\s+person|someone|my\s+(enemy|neighbou?r|boss|ex|colleague|rival|in-?law))\b/i,
+      /\b(make|cause)\s+(him|her|them|my\s+(enemy|rival|neighbou?r|boss|ex|colleague|in-?law))\s+(suffer|pay|fail|lose|miserable)\b/i,
     ],
     blockResponse:
       "I won't help with anything meant to control, bind or harm another person — that's outside what I'll do, regardless of how it's framed.\n\nIf there's a difficult relationship behind this, I'm glad to look at what your chart says about your own situation and what this period supports for you.",
@@ -244,7 +306,7 @@ export const RISK_POLICIES: RiskPolicy[] = [
       'Predicting a case outcome could influence a real legal decision. The answer describes the period, not the verdict.',
     patterns: [
       /\b(will|do)\s+i\s+win\s+(the|my|this)\s+(case|lawsuit|litigation|dispute)\b/i,
-      /\b(court|lawsuit|litigation|legal\s+case|divorce\s+case|fir|bail)\b/i,
+      /\b(court|lawsuit|litigation|legal\s+case|divorce\s+case|fir|bail|judge|verdict|tribunal|appeal|visa|immigration|custody)\b/i,
     ],
     constraints: [
       'Do NOT predict the outcome of any legal proceeding.',
@@ -262,6 +324,10 @@ export const RISK_POLICIES: RiskPolicy[] = [
       /\bis\s+(he|she|they|my\s+(husband|wife|partner|boyfriend|girlfriend|ex))\s+(cheating|lying|seeing\s+someone|faithful)\b/i,
       /\bdoes\s+(he|she|they)\s+(love|like|still\s+care\s+about)\s+me\b/i,
       /\bwhat\s+is\s+(he|she|they)\s+(thinking|feeling|planning)\b/i,
+      // Reading a chart we do not hold. Constrained rather than blocked: the
+      // honest answer is that their chart is not available to us.
+      /\b(his|her|their)\s+(chart|kundli|kundali|horoscope|birth\s+chart|rashi)\b/i,
+      /\bmy\s+[\w-]+'s\s+(chart|kundli|kundali|horoscope)\b/i,
     ],
     constraints: [
       "Do NOT make factual claims about another person's behaviour, feelings or intentions - their chart is not available and the user's chart cannot reveal them.",
