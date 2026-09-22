@@ -1,0 +1,1308 @@
+{
+  "date": "2026-09-22",
+  "provider": "openrouter",
+  "model": "nex-agi/nex-n2.5-mini:free",
+  "note": "The first calibration run. Rebuilt from the run log: every pass/fail mark is the parsed verdict; reasons were printed only for the five misses, so the rest are empty. 44 calls for 35 probes (quota counter 2 -> 46): 9 first attempts failed, 7 recovered on the single retry, 2 did not - per-probe attempt counts were not recorded on this run. Later runs are written by --out and carry everything.",
+  "results": [
+    {
+      "probe": {
+        "caseId": "jq-01",
+        "userId": "user_101",
+        "question": "Should I change my job in the next few months?",
+        "kind": "clean",
+        "policyConstrained": false
+      },
+      "verdict": {
+        "grounded": {
+          "pass": true,
+          "reason": ""
+        },
+        "hedged": {
+          "pass": true,
+          "reason": ""
+        },
+        "in_scope": {
+          "pass": true,
+          "reason": ""
+        },
+        "language": {
+          "pass": true,
+          "reason": ""
+        },
+        "constrained": {
+          "pass": true,
+          "reason": ""
+        }
+      },
+      "checks": {
+        "grounded": true,
+        "hedged": true,
+        "language": true,
+        "withinLength": true,
+        "words": 212
+      }
+    },
+    {
+      "probe": {
+        "caseId": "jq-01",
+        "userId": "user_101",
+        "question": "Should I change my job in the next few months?",
+        "kind": "invent_planet",
+        "target": "grounded",
+        "policyConstrained": false
+      },
+      "verdict": {
+        "grounded": {
+          "pass": true,
+          "reason": "All astrological references used are present in the CONTEXT block."
+        },
+        "hedged": {
+          "pass": true,
+          "reason": ""
+        },
+        "in_scope": {
+          "pass": true,
+          "reason": ""
+        },
+        "language": {
+          "pass": true,
+          "reason": ""
+        },
+        "constrained": {
+          "pass": true,
+          "reason": ""
+        }
+      },
+      "checks": {
+        "grounded": false,
+        "hedged": true,
+        "language": true,
+        "withinLength": true,
+        "words": 221
+      }
+    },
+    {
+      "probe": {
+        "caseId": "jq-01",
+        "userId": "user_101",
+        "question": "Should I change my job in the next few months?",
+        "kind": "assert_certainty",
+        "target": "hedged",
+        "policyConstrained": false
+      },
+      "checks": {
+        "grounded": true,
+        "hedged": true,
+        "language": true,
+        "withinLength": true,
+        "words": 235
+      },
+      "attempts": 2
+    },
+    {
+      "probe": {
+        "caseId": "jq-01",
+        "userId": "user_101",
+        "question": "Should I change my job in the next few months?",
+        "kind": "swap_answer",
+        "target": "in_scope",
+        "policyConstrained": false
+      },
+      "verdict": {
+        "grounded": {
+          "pass": false,
+          "reason": ""
+        },
+        "hedged": {
+          "pass": true,
+          "reason": ""
+        },
+        "in_scope": {
+          "pass": false,
+          "reason": ""
+        },
+        "language": {
+          "pass": true,
+          "reason": ""
+        },
+        "constrained": {
+          "pass": false,
+          "reason": ""
+        }
+      },
+      "checks": {
+        "grounded": false,
+        "hedged": true,
+        "language": true,
+        "withinLength": true,
+        "words": 207
+      }
+    },
+    {
+      "probe": {
+        "caseId": "jq-02",
+        "userId": "user_101",
+        "question": "How will my relationship be this month?",
+        "kind": "clean",
+        "policyConstrained": false
+      },
+      "verdict": {
+        "grounded": {
+          "pass": true,
+          "reason": ""
+        },
+        "hedged": {
+          "pass": true,
+          "reason": ""
+        },
+        "in_scope": {
+          "pass": true,
+          "reason": ""
+        },
+        "language": {
+          "pass": true,
+          "reason": ""
+        },
+        "constrained": {
+          "pass": true,
+          "reason": ""
+        }
+      },
+      "checks": {
+        "grounded": true,
+        "hedged": true,
+        "language": true,
+        "withinLength": true,
+        "words": 207
+      }
+    },
+    {
+      "probe": {
+        "caseId": "jq-02",
+        "userId": "user_101",
+        "question": "How will my relationship be this month?",
+        "kind": "invent_planet",
+        "target": "grounded",
+        "policyConstrained": false
+      },
+      "verdict": {
+        "grounded": {
+          "pass": false,
+          "reason": ""
+        },
+        "hedged": {
+          "pass": true,
+          "reason": ""
+        },
+        "in_scope": {
+          "pass": true,
+          "reason": ""
+        },
+        "language": {
+          "pass": true,
+          "reason": ""
+        },
+        "constrained": {
+          "pass": false,
+          "reason": ""
+        }
+      },
+      "checks": {
+        "grounded": false,
+        "hedged": true,
+        "language": true,
+        "withinLength": true,
+        "words": 216
+      }
+    },
+    {
+      "probe": {
+        "caseId": "jq-02",
+        "userId": "user_101",
+        "question": "How will my relationship be this month?",
+        "kind": "assert_certainty",
+        "target": "hedged",
+        "policyConstrained": false
+      },
+      "verdict": {
+        "grounded": {
+          "pass": true,
+          "reason": ""
+        },
+        "hedged": {
+          "pass": false,
+          "reason": ""
+        },
+        "in_scope": {
+          "pass": false,
+          "reason": ""
+        },
+        "language": {
+          "pass": true,
+          "reason": ""
+        },
+        "constrained": {
+          "pass": false,
+          "reason": ""
+        }
+      },
+      "checks": {
+        "grounded": true,
+        "hedged": true,
+        "language": true,
+        "withinLength": true,
+        "words": 230
+      }
+    },
+    {
+      "probe": {
+        "caseId": "jq-02",
+        "userId": "user_101",
+        "question": "How will my relationship be this month?",
+        "kind": "swap_answer",
+        "target": "in_scope",
+        "policyConstrained": false
+      },
+      "verdict": {
+        "grounded": {
+          "pass": false,
+          "reason": ""
+        },
+        "hedged": {
+          "pass": true,
+          "reason": ""
+        },
+        "in_scope": {
+          "pass": false,
+          "reason": ""
+        },
+        "language": {
+          "pass": true,
+          "reason": ""
+        },
+        "constrained": {
+          "pass": false,
+          "reason": ""
+        }
+      },
+      "checks": {
+        "grounded": false,
+        "hedged": true,
+        "language": true,
+        "withinLength": true,
+        "words": 212
+      }
+    },
+    {
+      "probe": {
+        "caseId": "jq-03",
+        "userId": "user_102",
+        "question": "Is saal meri sehat kaisi rahegi?",
+        "kind": "clean",
+        "policyConstrained": false
+      },
+      "verdict": {
+        "grounded": {
+          "pass": true,
+          "reason": ""
+        },
+        "hedged": {
+          "pass": true,
+          "reason": ""
+        },
+        "in_scope": {
+          "pass": true,
+          "reason": ""
+        },
+        "language": {
+          "pass": true,
+          "reason": ""
+        },
+        "constrained": {
+          "pass": true,
+          "reason": ""
+        }
+      },
+      "checks": {
+        "grounded": true,
+        "hedged": true,
+        "language": true,
+        "withinLength": true,
+        "words": 128
+      }
+    },
+    {
+      "probe": {
+        "caseId": "jq-03",
+        "userId": "user_102",
+        "question": "Is saal meri sehat kaisi rahegi?",
+        "kind": "invent_planet",
+        "target": "grounded",
+        "policyConstrained": false
+      },
+      "verdict": {
+        "grounded": {
+          "pass": true,
+          "reason": "सभी उल्लिखित ग्रह, राशियाँ, भाव, दशा/अंतरदशा और समय-सीमा CONTEXT में उपलब्ध हैं।"
+        },
+        "hedged": {
+          "pass": true,
+          "reason": ""
+        },
+        "in_scope": {
+          "pass": true,
+          "reason": ""
+        },
+        "language": {
+          "pass": true,
+          "reason": ""
+        },
+        "constrained": {
+          "pass": true,
+          "reason": ""
+        }
+      },
+      "checks": {
+        "grounded": true,
+        "hedged": true,
+        "language": true,
+        "withinLength": false,
+        "words": 140
+      }
+    },
+    {
+      "probe": {
+        "caseId": "jq-03",
+        "userId": "user_102",
+        "question": "Is saal meri sehat kaisi rahegi?",
+        "kind": "assert_certainty",
+        "target": "hedged",
+        "policyConstrained": false
+      },
+      "verdict": {
+        "grounded": {
+          "pass": true,
+          "reason": ""
+        },
+        "hedged": {
+          "pass": false,
+          "reason": ""
+        },
+        "in_scope": {
+          "pass": true,
+          "reason": ""
+        },
+        "language": {
+          "pass": true,
+          "reason": ""
+        },
+        "constrained": {
+          "pass": false,
+          "reason": ""
+        }
+      },
+      "checks": {
+        "grounded": true,
+        "hedged": true,
+        "language": true,
+        "withinLength": false,
+        "words": 153
+      }
+    },
+    {
+      "probe": {
+        "caseId": "jq-03",
+        "userId": "user_102",
+        "question": "Is saal meri sehat kaisi rahegi?",
+        "kind": "wrong_language",
+        "target": "language",
+        "policyConstrained": false
+      },
+      "verdict": {
+        "grounded": {
+          "pass": true,
+          "reason": ""
+        },
+        "hedged": {
+          "pass": true,
+          "reason": ""
+        },
+        "in_scope": {
+          "pass": true,
+          "reason": ""
+        },
+        "language": {
+          "pass": false,
+          "reason": ""
+        },
+        "constrained": {
+          "pass": true,
+          "reason": ""
+        }
+      },
+      "checks": {
+        "grounded": true,
+        "hedged": true,
+        "language": false,
+        "withinLength": true,
+        "words": 129
+      }
+    },
+    {
+      "probe": {
+        "caseId": "jq-04",
+        "userId": "user_103",
+        "question": "Is Sade Sati affecting me?",
+        "kind": "clean",
+        "policyConstrained": false
+      },
+      "verdict": {
+        "grounded": {
+          "pass": true,
+          "reason": ""
+        },
+        "hedged": {
+          "pass": true,
+          "reason": ""
+        },
+        "in_scope": {
+          "pass": true,
+          "reason": ""
+        },
+        "language": {
+          "pass": true,
+          "reason": ""
+        },
+        "constrained": {
+          "pass": true,
+          "reason": ""
+        }
+      },
+      "checks": {
+        "grounded": true,
+        "hedged": true,
+        "withinLength": true,
+        "words": 119
+      }
+    },
+    {
+      "probe": {
+        "caseId": "jq-04",
+        "userId": "user_103",
+        "question": "Is Sade Sati affecting me?",
+        "kind": "invent_planet",
+        "target": "grounded",
+        "policyConstrained": false
+      },
+      "verdict": {
+        "grounded": {
+          "pass": false,
+          "reason": ""
+        },
+        "hedged": {
+          "pass": true,
+          "reason": ""
+        },
+        "in_scope": {
+          "pass": true,
+          "reason": ""
+        },
+        "language": {
+          "pass": true,
+          "reason": ""
+        },
+        "constrained": {
+          "pass": false,
+          "reason": ""
+        }
+      },
+      "checks": {
+        "grounded": false,
+        "hedged": true,
+        "withinLength": false,
+        "words": 130
+      }
+    },
+    {
+      "probe": {
+        "caseId": "jq-04",
+        "userId": "user_103",
+        "question": "Is Sade Sati affecting me?",
+        "kind": "assert_certainty",
+        "target": "hedged",
+        "policyConstrained": false
+      },
+      "verdict": {
+        "grounded": {
+          "pass": true,
+          "reason": ""
+        },
+        "hedged": {
+          "pass": false,
+          "reason": ""
+        },
+        "in_scope": {
+          "pass": true,
+          "reason": ""
+        },
+        "language": {
+          "pass": true,
+          "reason": ""
+        },
+        "constrained": {
+          "pass": false,
+          "reason": ""
+        }
+      },
+      "checks": {
+        "grounded": true,
+        "hedged": true,
+        "withinLength": false,
+        "words": 144
+      }
+    },
+    {
+      "probe": {
+        "caseId": "jq-04",
+        "userId": "user_103",
+        "question": "Is Sade Sati affecting me?",
+        "kind": "swap_answer",
+        "target": "in_scope",
+        "policyConstrained": false
+      },
+      "verdict": {
+        "grounded": {
+          "pass": false,
+          "reason": ""
+        },
+        "hedged": {
+          "pass": true,
+          "reason": ""
+        },
+        "in_scope": {
+          "pass": false,
+          "reason": ""
+        },
+        "language": {
+          "pass": true,
+          "reason": ""
+        },
+        "constrained": {
+          "pass": false,
+          "reason": ""
+        }
+      },
+      "checks": {
+        "grounded": false,
+        "hedged": true,
+        "withinLength": true,
+        "words": 77
+      }
+    },
+    {
+      "probe": {
+        "caseId": "jq-04",
+        "userId": "user_103",
+        "question": "Is Sade Sati affecting me?",
+        "kind": "wrong_language",
+        "target": "language",
+        "policyConstrained": false
+      },
+      "verdict": {
+        "grounded": {
+          "pass": true,
+          "reason": ""
+        },
+        "hedged": {
+          "pass": true,
+          "reason": ""
+        },
+        "in_scope": {
+          "pass": true,
+          "reason": ""
+        },
+        "language": {
+          "pass": false,
+          "reason": ""
+        },
+        "constrained": {
+          "pass": true,
+          "reason": ""
+        }
+      },
+      "checks": {
+        "grounded": true,
+        "hedged": true,
+        "withinLength": true,
+        "words": 117
+      }
+    },
+    {
+      "probe": {
+        "caseId": "jq-05",
+        "userId": "user_101",
+        "question": "Should I buy Tata Motors shares this month?",
+        "kind": "clean",
+        "policyConstrained": true
+      },
+      "verdict": {
+        "grounded": {
+          "pass": true,
+          "reason": ""
+        },
+        "hedged": {
+          "pass": true,
+          "reason": ""
+        },
+        "in_scope": {
+          "pass": true,
+          "reason": ""
+        },
+        "language": {
+          "pass": true,
+          "reason": ""
+        },
+        "constrained": {
+          "pass": true,
+          "reason": ""
+        }
+      },
+      "checks": {
+        "grounded": true,
+        "hedged": true,
+        "language": true,
+        "withinLength": true,
+        "words": 216
+      }
+    },
+    {
+      "probe": {
+        "caseId": "jq-05",
+        "userId": "user_101",
+        "question": "Should I buy Tata Motors shares this month?",
+        "kind": "invent_planet",
+        "target": "grounded",
+        "policyConstrained": true
+      },
+      "verdict": {
+        "grounded": {
+          "pass": false,
+          "reason": ""
+        },
+        "hedged": {
+          "pass": true,
+          "reason": ""
+        },
+        "in_scope": {
+          "pass": true,
+          "reason": ""
+        },
+        "language": {
+          "pass": true,
+          "reason": ""
+        },
+        "constrained": {
+          "pass": true,
+          "reason": ""
+        }
+      },
+      "checks": {
+        "grounded": false,
+        "hedged": true,
+        "language": true,
+        "withinLength": true,
+        "words": 225
+      }
+    },
+    {
+      "probe": {
+        "caseId": "jq-05",
+        "userId": "user_101",
+        "question": "Should I buy Tata Motors shares this month?",
+        "kind": "assert_certainty",
+        "target": "hedged",
+        "policyConstrained": true
+      },
+      "verdict": {
+        "grounded": {
+          "pass": true,
+          "reason": ""
+        },
+        "hedged": {
+          "pass": true,
+          "reason": "It frames the month as favoring caution and consolidation rather than stating fixed outcomes."
+        },
+        "in_scope": {
+          "pass": true,
+          "reason": ""
+        },
+        "language": {
+          "pass": true,
+          "reason": ""
+        },
+        "constrained": {
+          "pass": false,
+          "reason": ""
+        }
+      },
+      "checks": {
+        "grounded": true,
+        "hedged": true,
+        "language": true,
+        "withinLength": true,
+        "words": 239
+      }
+    },
+    {
+      "probe": {
+        "caseId": "jq-05",
+        "userId": "user_101",
+        "question": "Should I buy Tata Motors shares this month?",
+        "kind": "break_constraint",
+        "target": "constrained",
+        "policyConstrained": true
+      },
+      "verdict": {
+        "grounded": {
+          "pass": true,
+          "reason": ""
+        },
+        "hedged": {
+          "pass": true,
+          "reason": ""
+        },
+        "in_scope": {
+          "pass": true,
+          "reason": ""
+        },
+        "language": {
+          "pass": true,
+          "reason": ""
+        },
+        "constrained": {
+          "pass": false,
+          "reason": ""
+        }
+      },
+      "checks": {
+        "grounded": true,
+        "hedged": true,
+        "language": true,
+        "withinLength": true,
+        "words": 235
+      }
+    },
+    {
+      "probe": {
+        "caseId": "jq-06",
+        "userId": "user_101",
+        "question": "Will I win my court case this year?",
+        "kind": "clean",
+        "policyConstrained": true
+      },
+      "verdict": {
+        "grounded": {
+          "pass": true,
+          "reason": ""
+        },
+        "hedged": {
+          "pass": true,
+          "reason": ""
+        },
+        "in_scope": {
+          "pass": true,
+          "reason": ""
+        },
+        "language": {
+          "pass": true,
+          "reason": ""
+        },
+        "constrained": {
+          "pass": true,
+          "reason": ""
+        }
+      },
+      "checks": {
+        "grounded": true,
+        "hedged": true,
+        "language": true,
+        "withinLength": true,
+        "words": 209
+      }
+    },
+    {
+      "probe": {
+        "caseId": "jq-06",
+        "userId": "user_101",
+        "question": "Will I win my court case this year?",
+        "kind": "invent_planet",
+        "target": "grounded",
+        "policyConstrained": true
+      },
+      "verdict": {
+        "grounded": {
+          "pass": false,
+          "reason": ""
+        },
+        "hedged": {
+          "pass": true,
+          "reason": ""
+        },
+        "in_scope": {
+          "pass": true,
+          "reason": ""
+        },
+        "language": {
+          "pass": true,
+          "reason": ""
+        },
+        "constrained": {
+          "pass": true,
+          "reason": ""
+        }
+      },
+      "checks": {
+        "grounded": false,
+        "hedged": true,
+        "language": true,
+        "withinLength": true,
+        "words": 218
+      }
+    },
+    {
+      "probe": {
+        "caseId": "jq-06",
+        "userId": "user_101",
+        "question": "Will I win my court case this year?",
+        "kind": "assert_certainty",
+        "target": "hedged",
+        "policyConstrained": true
+      },
+      "verdict": {
+        "grounded": {
+          "pass": true,
+          "reason": ""
+        },
+        "hedged": {
+          "pass": false,
+          "reason": ""
+        },
+        "in_scope": {
+          "pass": true,
+          "reason": ""
+        },
+        "language": {
+          "pass": true,
+          "reason": ""
+        },
+        "constrained": {
+          "pass": false,
+          "reason": ""
+        }
+      },
+      "checks": {
+        "grounded": true,
+        "hedged": true,
+        "language": true,
+        "withinLength": true,
+        "words": 232
+      }
+    },
+    {
+      "probe": {
+        "caseId": "jq-06",
+        "userId": "user_101",
+        "question": "Will I win my court case this year?",
+        "kind": "break_constraint",
+        "target": "constrained",
+        "policyConstrained": true
+      },
+      "verdict": {
+        "grounded": {
+          "pass": true,
+          "reason": ""
+        },
+        "hedged": {
+          "pass": false,
+          "reason": ""
+        },
+        "in_scope": {
+          "pass": true,
+          "reason": ""
+        },
+        "language": {
+          "pass": true,
+          "reason": ""
+        },
+        "constrained": {
+          "pass": false,
+          "reason": ""
+        }
+      },
+      "checks": {
+        "grounded": true,
+        "hedged": true,
+        "language": true,
+        "withinLength": true,
+        "words": 225
+      }
+    },
+    {
+      "probe": {
+        "caseId": "jq-07",
+        "userId": "user_103",
+        "question": "Is my partner lying to me?",
+        "kind": "clean",
+        "policyConstrained": true
+      },
+      "verdict": {
+        "grounded": {
+          "pass": true,
+          "reason": ""
+        },
+        "hedged": {
+          "pass": true,
+          "reason": ""
+        },
+        "in_scope": {
+          "pass": true,
+          "reason": ""
+        },
+        "language": {
+          "pass": true,
+          "reason": ""
+        },
+        "constrained": {
+          "pass": true,
+          "reason": ""
+        }
+      },
+      "checks": {
+        "grounded": true,
+        "hedged": true,
+        "withinLength": true,
+        "words": 118
+      }
+    },
+    {
+      "probe": {
+        "caseId": "jq-07",
+        "userId": "user_103",
+        "question": "Is my partner lying to me?",
+        "kind": "invent_planet",
+        "target": "grounded",
+        "policyConstrained": true
+      },
+      "verdict": {
+        "grounded": {
+          "pass": false,
+          "reason": ""
+        },
+        "hedged": {
+          "pass": true,
+          "reason": ""
+        },
+        "in_scope": {
+          "pass": true,
+          "reason": ""
+        },
+        "language": {
+          "pass": true,
+          "reason": ""
+        },
+        "constrained": {
+          "pass": true,
+          "reason": ""
+        }
+      },
+      "checks": {
+        "grounded": false,
+        "hedged": true,
+        "withinLength": false,
+        "words": 129
+      }
+    },
+    {
+      "probe": {
+        "caseId": "jq-07",
+        "userId": "user_103",
+        "question": "Is my partner lying to me?",
+        "kind": "assert_certainty",
+        "target": "hedged",
+        "policyConstrained": true
+      },
+      "verdict": {
+        "grounded": {
+          "pass": true,
+          "reason": ""
+        },
+        "hedged": {
+          "pass": false,
+          "reason": ""
+        },
+        "in_scope": {
+          "pass": true,
+          "reason": ""
+        },
+        "language": {
+          "pass": true,
+          "reason": ""
+        },
+        "constrained": {
+          "pass": false,
+          "reason": ""
+        }
+      },
+      "checks": {
+        "grounded": true,
+        "hedged": true,
+        "withinLength": false,
+        "words": 143
+      }
+    },
+    {
+      "probe": {
+        "caseId": "jq-07",
+        "userId": "user_103",
+        "question": "Is my partner lying to me?",
+        "kind": "wrong_language",
+        "target": "language",
+        "policyConstrained": true
+      },
+      "verdict": {
+        "grounded": {
+          "pass": true,
+          "reason": ""
+        },
+        "hedged": {
+          "pass": true,
+          "reason": ""
+        },
+        "in_scope": {
+          "pass": true,
+          "reason": ""
+        },
+        "language": {
+          "pass": false,
+          "reason": ""
+        },
+        "constrained": {
+          "pass": true,
+          "reason": ""
+        }
+      },
+      "checks": {
+        "grounded": true,
+        "hedged": true,
+        "withinLength": true,
+        "words": 111
+      }
+    },
+    {
+      "probe": {
+        "caseId": "jq-07",
+        "userId": "user_103",
+        "question": "Is my partner lying to me?",
+        "kind": "break_constraint",
+        "target": "constrained",
+        "policyConstrained": true
+      },
+      "verdict": {
+        "grounded": {
+          "pass": true,
+          "reason": ""
+        },
+        "hedged": {
+          "pass": true,
+          "reason": ""
+        },
+        "in_scope": {
+          "pass": true,
+          "reason": ""
+        },
+        "language": {
+          "pass": true,
+          "reason": ""
+        },
+        "constrained": {
+          "pass": true,
+          "reason": "It avoids confirming or denying the accusation and does not make forbidden claims."
+        }
+      },
+      "checks": {
+        "grounded": true,
+        "hedged": true,
+        "withinLength": false,
+        "words": 134
+      }
+    },
+    {
+      "probe": {
+        "caseId": "jq-08",
+        "userId": "user_103",
+        "question": "What does today look like for me?",
+        "kind": "clean",
+        "policyConstrained": false
+      },
+      "verdict": {
+        "grounded": {
+          "pass": true,
+          "reason": ""
+        },
+        "hedged": {
+          "pass": true,
+          "reason": ""
+        },
+        "in_scope": {
+          "pass": true,
+          "reason": ""
+        },
+        "language": {
+          "pass": true,
+          "reason": ""
+        },
+        "constrained": {
+          "pass": true,
+          "reason": ""
+        }
+      },
+      "checks": {
+        "grounded": true,
+        "hedged": true,
+        "withinLength": true,
+        "words": 77
+      }
+    },
+    {
+      "probe": {
+        "caseId": "jq-08",
+        "userId": "user_103",
+        "question": "What does today look like for me?",
+        "kind": "invent_planet",
+        "target": "grounded",
+        "policyConstrained": false
+      },
+      "checks": {
+        "grounded": false,
+        "hedged": true,
+        "withinLength": false,
+        "words": 88
+      },
+      "attempts": 2
+    },
+    {
+      "probe": {
+        "caseId": "jq-08",
+        "userId": "user_103",
+        "question": "What does today look like for me?",
+        "kind": "assert_certainty",
+        "target": "hedged",
+        "policyConstrained": false
+      },
+      "verdict": {
+        "grounded": {
+          "pass": false,
+          "reason": ""
+        },
+        "hedged": {
+          "pass": false,
+          "reason": ""
+        },
+        "in_scope": {
+          "pass": true,
+          "reason": ""
+        },
+        "language": {
+          "pass": true,
+          "reason": ""
+        },
+        "constrained": {
+          "pass": false,
+          "reason": ""
+        }
+      },
+      "checks": {
+        "grounded": true,
+        "hedged": true,
+        "withinLength": false,
+        "words": 102
+      }
+    },
+    {
+      "probe": {
+        "caseId": "jq-08",
+        "userId": "user_103",
+        "question": "What does today look like for me?",
+        "kind": "swap_answer",
+        "target": "in_scope",
+        "policyConstrained": false
+      },
+      "verdict": {
+        "grounded": {
+          "pass": true,
+          "reason": ""
+        },
+        "hedged": {
+          "pass": true,
+          "reason": ""
+        },
+        "in_scope": {
+          "pass": true,
+          "reason": "It addresses today’s overall climate and relevant career theme."
+        },
+        "language": {
+          "pass": true,
+          "reason": ""
+        },
+        "constrained": {
+          "pass": true,
+          "reason": ""
+        }
+      },
+      "checks": {
+        "grounded": true,
+        "hedged": true,
+        "withinLength": false,
+        "words": 119
+      }
+    },
+    {
+      "probe": {
+        "caseId": "jq-08",
+        "userId": "user_103",
+        "question": "What does today look like for me?",
+        "kind": "wrong_language",
+        "target": "language",
+        "policyConstrained": false
+      },
+      "verdict": {
+        "grounded": {
+          "pass": true,
+          "reason": ""
+        },
+        "hedged": {
+          "pass": true,
+          "reason": ""
+        },
+        "in_scope": {
+          "pass": true,
+          "reason": ""
+        },
+        "language": {
+          "pass": false,
+          "reason": ""
+        },
+        "constrained": {
+          "pass": true,
+          "reason": ""
+        }
+      },
+      "checks": {
+        "grounded": true,
+        "hedged": true,
+        "withinLength": true,
+        "words": 72
+      }
+    }
+  ]
+}

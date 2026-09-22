@@ -276,6 +276,12 @@ This is the question that most rewards domain knowledge.
 > an LLM-as-judge rubric for answer quality, would turn every tuning argument into
 > a measurement. That's the single biggest gap."
 
+**Both halves of that are now built** — 261 labelled cases in `eval/`, and
+`npm run eval:judge` for answer quality. If you give this answer, give it in the
+past tense and lead with what the measurement found rather than that it exists:
+intent accuracy 74.2%, a held-out safety probe at 43.8%, and a judge that the
+regex verifier out-scored on the one dimension both can see.
+
 ### "Where's the weakest code?"
 
 Answer this honestly; it's a character test.
@@ -459,9 +465,10 @@ Asking good questions signals seniority.
   determines whether the LLM fallback is worth building."
 - "Do you have astrologers reviewing AI answers today? I built an escalation flag
   but no routing — I'd want to know what the human loop looks like."
-- "How do you currently measure answer quality? I deliberately left out an eval
-  harness for time, and I'd want to build against your existing rubric rather than
-  inventing one."
+- "How do you currently measure answer quality? I built an LLM-as-judge and
+  calibrated it by mutation — 0 false positives on clean answers, but it missed
+  3 of 5 defects appended to an otherwise good answer. I'd want to grade against
+  your rubric rather than the one I invented."
 - "Is the panchang service location-aware internally? The contract in the brief
   has no location parameter, and the panchang day is sunrise-based."
 - "What's the language split in production? Hinglish needed a different prompt
@@ -471,13 +478,21 @@ Asking good questions signals seniority.
 
 ## Numbers to have memorised
 
+These were last re-measured on 2026-09-22, after the transit service landed.
+Where a figure moved, the old one is in brackets — you will be asked what
+changed and why.
+
 | | |
 |---|---|
-| Tests | **130** across 8 suites |
+| Tests | **329** across 16 suites *(was 130 / 8)* |
 | Engine latency | **61ms** — LLM **9.9s** (99.4%) |
-| Fan-out | 4 services in **54ms**, parallel |
-| Selection | **57%** of candidate set removed |
-| Tokens | 1541 sent vs 1380 raw dump — *different*, not fewer |
+| Fan-out | **5** services, parallel *(4 before transits)* |
+| Selection | **58%** of candidate set removed |
+| Tokens | **2057** sent vs **1674** raw dump — 23% *more*, and deliberately so *(was 1541 / 1380, 12%)* |
+| Intent / horizon accuracy | **74.2%** / **87.9%**, 124 cases |
+| Safety | 100% block recall — but **43.8%** on a cold held-out probe |
+| Selection eval | **94.1%** pass, **100%** exclusion-reason accuracy |
+| Judge calibration | **20/25** defects caught, **0/8** clean answers wrongly failed |
 | Dasha example | Rahu/Mars = 9th of 9, `18×7/120` = **12.6 months** |
 | Confidence | 0.30 data / 0.20 coverage / 0.20 birth time / 0.15 intent / 0.15 grounding |
 | Thresholds | HIGH ≥ 0.75, MEDIUM ≥ 0.55 |

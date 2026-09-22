@@ -814,7 +814,7 @@ Also emitted: `upstream.retry`, `upstream.failed`, `safety.blocked`,
 
 ## Testing
 
-**284 tests.** The e2e suite runs over real HTTP against the mock upstream on its
+**329 tests.** The e2e suite runs over real HTTP against the mock upstream on its
 own port — deliberately not stubbed at the service boundary, since the
 concurrency, retry, timeout and partial-failure paths only mean something if a
 socket is involved.
@@ -823,6 +823,7 @@ socket is involved.
 | --------------------------- | ----------------------------------------------------------------- |
 | `vimshottari.spec.ts`       | Dasha arithmetic, the Rahu–Mars final-sub-period property          |
 | `gochar.spec.ts`            | Sade Sati phases and cycle arithmetic, the backwards-moving nodes  |
+| `judge.spec.ts`             | The judge's strict parser, and that each mutation breaks one dimension and evades the regexes |
 | `focus.extractor.spec.ts`   | The planet a question names, in three scripts, **and its false positives** |
 | `chart-validation.spec.ts`  | Lagna/house-lord consistency, birth-time reliability heuristics    |
 | `intent.spec.ts`            | All sample questions, Hinglish/Devanagari, horizon extraction      |
@@ -952,8 +953,8 @@ per-instance and reset on deploy — see below.
    **73.3%**, horizon **87.5%**, secondary-intent recall **7.7%**, selection pass
    rate **88.5%**. Safety now reads 100% on every metric — but a held-out probe
    written cold scored **43.8%** before those patterns were fixed, and that is
-   the number to quote. Still outstanding from this item: the LLM-as-judge rubric
-   for answer quality, which needs generation and so cannot live in the CI gate.
+   the number to quote. The LLM-as-judge half of this item is now built too —
+   see item 5.
 2. ~~**The LLM intent fallback.**~~ **Built** — `IntentResolver` escalates only
    questions where the lexicon found no signal at all (confidence < 0.35), which
    is the measured knee: 34% of traffic containing 66% of all intent errors.
@@ -1000,10 +1001,29 @@ per-instance and reset on deploy — see below.
 
    Every demo button on it carries a machine-checkable claim asserted by the e2e
    suite, so a chip that stops demonstrating what it says fails the build.
-5. **Remedies (upay).** Mantra, gemstone, fasting and charity suggestions keyed
+5. ~~**An LLM-as-judge for answer quality.**~~ **Built** — `npm run eval:judge`,
+   the one eval dimension nothing touched before. Five rubric dimensions
+   (`grounded`, `hedged`, `in_scope`, `language`, `constrained`), graded against
+   the generator's own prompt verbatim so the judge cannot drift from the rules
+   it is enforcing.
+
+   **The judge is measured before it measures anything**, by mutation: each of
+   eight hand-written clean answers is also sent with one named defect injected,
+   and the judge is scored on whether it flags that dimension and only that one.
+   It caught **20 of 25** defects (80%) and wrongly failed **0 of 8** clean
+   answers across English, Hindi and Hinglish.
+
+   Two findings worth more than the headline. On `grounded` — the only dimension
+   where a regex verifier also exists — **the regexes beat the model, 6/7 to
+   5/7**, which is the argument for keeping deterministic checks deterministic
+   and spending the judge on what has none. And three of the five misses are one
+   failure: a clean answer with a single contradicting sentence appended, graded
+   on the body and not the tail. Written up as an open issue rather than tuned
+   away.
+6. **Remedies (upay).** Mantra, gemstone, fasting and charity suggestions keyed
    to the afflicted planet — culturally expected in this product, and the natural
    monetization surface.
-6. **Multi-turn context.** "What about my finances?" after a career question
+7. **Multi-turn context.** "What about my finances?" after a career question
    should not restart from zero.
 
 ---

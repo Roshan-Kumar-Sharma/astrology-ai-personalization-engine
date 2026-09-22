@@ -16,6 +16,10 @@ npm test              # includes eval/eval.spec.ts, the regression gate
 No LLM, no network, no API key. The whole sweep runs in about a second, which is
 why it can gate every push rather than being a thing someone runs quarterly.
 
+A second tier grades the **answer** rather than the plan, and it does need a
+provider — `npm run eval:judge`, with `-- --dry-run` to see every probe for
+free. It never gates CI. See [The answer-quality tier](#the-answer-quality-tier).
+
 ---
 
 ## What is scored
@@ -30,6 +34,9 @@ and it is the part a regression gate can hold. Answer quality is a separate tier
 | `dataset/intent.jsonl` | 124 | intent classification, horizon extraction, secondary intents |
 | `dataset/safety.jsonl` | 103 | refusal decisions, policy attribution, constraint attachment |
 | `dataset/selection.jsonl` | 34 | which context items are sent, and **why** the others were not |
+
+Plus **8 clean answers** in `dataset/judge.jsonl` for the answer-quality tier,
+which is scored separately and never gates CI.
 
 ### Two labelling rules
 
@@ -170,14 +177,53 @@ override for the transits — the case had been right all along.
 
 ---
 
-## Not measured here
+## The answer-quality tier
 
-**Answer quality.** Grounding, tone adherence, language adherence and length
-compliance need generation, which means a key, a budget and a judge. That is a
-second tier with different properties — non-deterministic, slow, costs money —
-so it does not belong in the CI gate, and folding it in would make this suite
-something nobody runs. The harness (`planFor`) already returns everything a
-judge would need to grade against.
+Added 2026-09-22. `dataset/judge.jsonl` holds **8 hand-written clean answers**
+— grounded only in the context the engine selects, in the user's own language,
+under the word cap, honouring every constraint — and `npm run eval:judge`
+grades them with an LLM judge on five dimensions: `grounded`, `hedged`,
+`in_scope`, `language`, `constrained`.
+
+**The judge is measured before it measures anything.** Each clean answer is
+also sent with one named defect injected — an invented planet, a stated
+certainty, the wrong language, a broken safety constraint, an answer to a
+different question — and the judge is scored on whether it flags that
+dimension and only that dimension. 35 probes, 8 clean and 27 mutated.
+
+Baseline, 2026-09-22, `nex-agi/nex-n2.5-mini:free`:
+
+| Dimension | Mutations caught | False positives | Deterministic check |
+|---|---:|---:|---:|
+| grounded | 5/7 (71.4%) | 0/8 | **6/7 (85.7%)** |
+| hedged | 6/7 (85.7%) | 0/8 | 0/7 — by design |
+| in_scope | 3/4 (75.0%) | 0/8 | none exists |
+| language | **4/4 (100%)** | 0/8 | 1/1, blind to Hinglish |
+| constrained | 2/3 (66.7%) | 0/3 | none exists |
+| **overall** | **20/25 (80.0%)** | **0/8 (0%)** | |
+
+Three things to read here, in this order:
+
+1. **0 false positives across three languages.** That is the column that
+   decides whether the judge may be pointed at real answers at all. It is also
+   the smallest denominator in the table.
+2. **On `grounded`, the regexes beat the model** (6/7 vs 5/7). Where a
+   deterministic check can exist it is cheaper, explainable and here more
+   accurate; the judge earns its place on the dimensions that have none.
+3. **Three of the five misses are the same failure** — a clean answer with one
+   contradicting sentence appended, graded on the body and not the tail. Open,
+   written up in `docs/11` Feature 8 Issue 2, with the experiment that would
+   separate leniency from position bias.
+
+The run is saved in `results/judge-calibration-2026-09-22.json` and can be
+re-scored with no provider: `npm run eval:judge -- --rescore <file>`.
+
+**Still not measured:** tone adherence — no mutation produces a tone a reviewer
+would agree is wrong, so the judge's verdict on it could not itself be checked.
+
+---
+
+## Not measured here
 
 **Degraded upstreams.** `bundleFor` holds every source healthy on purpose, so a
 selection miss is a rules problem rather than an availability artefact. Partial

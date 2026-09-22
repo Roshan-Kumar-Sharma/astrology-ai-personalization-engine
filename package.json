@@ -17,7 +17,8 @@
     "why": "ts-node -T scripts/why.ts",
     "eval:intent-llm": "ts-node -T eval/intent-llm.ts",
     "eval:gate": "ts-node -T eval/intent-gate.ts",
-    "eval:safety-llm": "ts-node -T eval/safety-llm.ts"
+    "eval:safety-llm": "ts-node -T eval/safety-llm.ts",
+    "eval:judge": "ts-node -T eval/answer-judge.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.122.0",
