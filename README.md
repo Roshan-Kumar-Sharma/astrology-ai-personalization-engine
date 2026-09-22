@@ -814,7 +814,7 @@ Also emitted: `upstream.retry`, `upstream.failed`, `safety.blocked`,
 
 ## Testing
 
-**329 tests.** The e2e suite runs over real HTTP against the mock upstream on its
+**330 tests.** The e2e suite runs over real HTTP against the mock upstream on its
 own port — deliberately not stubbed at the service boundary, since the
 concurrency, retry, timeout and partial-failure paths only mean something if a
 socket is involved.
@@ -1016,10 +1016,13 @@ per-instance and reset on deploy — see below.
    Two findings worth more than the headline. On `grounded` — the only dimension
    where a regex verifier also exists — **the regexes beat the model, 6/7 to
    5/7**, which is the argument for keeping deterministic checks deterministic
-   and spending the judge on what has none. And three of the five misses are one
-   failure: a clean answer with a single contradicting sentence appended, graded
-   on the body and not the tail. Written up as an open issue rather than tuned
-   away.
+   and spending the judge on what has none. And **four of the five misses are a
+   defect appended to an otherwise-clean answer**, where every verdict justifies
+   the pass by describing what the answer does well and never mentions the
+   defect — the judge did not weigh the violation, it never looked for it. That
+   distinction decides the fix (an extractive one, not a reweighting one), and
+   it is written up as an open issue with the mutation that tests it rather than
+   tuned away.
 6. **Remedies (upay).** Mantra, gemstone, fasting and charity suggestions keyed
    to the afflicted planet — culturally expected in this product, and the natural
    monetization surface.

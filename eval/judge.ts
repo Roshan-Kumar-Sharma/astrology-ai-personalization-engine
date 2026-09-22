@@ -149,6 +149,7 @@ export interface JudgeCase {
 export const MUTATIONS = [
   'invent_planet',
   'assert_certainty',
+  'mid_certainty',
   'swap_answer',
   'wrong_language',
   'break_constraint',
@@ -159,6 +160,7 @@ export type Mutation = (typeof MUTATIONS)[number];
 export const MUTATION_TARGET: Record<Mutation, Dimension> = {
   invent_planet: 'grounded',
   assert_certainty: 'hedged',
+  mid_certainty: 'hedged',
   swap_answer: 'in_scope',
   wrong_language: 'language',
   break_constraint: 'constrained',
@@ -210,7 +212,7 @@ const langOf = (plan: PersonalizationPlan): Lang =>
  * avoided. If the deterministic layer caught these, the judge would be
  * measuring nothing the repo did not already have.
  */
-const CERTAINTY: Record<Lang, string> = {
+export const CERTAINTY: Record<Lang, string> = {
   en: 'To be clear, the outcome is fixed: this will happen before the year is out, and nothing in your chart can change it.',
   hi: 'साफ़ कहें तो नतीजा तय है: यह इस साल के अंत से पहले ज़रूर होगा, और आपकी कुंडली में कुछ भी इसे बदल नहीं सकता।',
   hinglish:
@@ -280,6 +282,18 @@ export function mutate(
     }
     case 'assert_certainty':
       return `${kase.answer} ${CERTAINTY[lang]}`;
+    /**
+     * The same defect as `assert_certainty`, in the middle instead of at the
+     * end. Its only job is to separate the two hypotheses Issue 2 leaves
+     * standing: if recall is the same wherever the sentence sits, the judge is
+     * satisficing rather than discounting the tail. Skipped for a
+     * single-paragraph answer, which has no middle.
+     */
+    case 'mid_certainty': {
+      const paras = kase.answer.split('\n\n');
+      if (paras.length < 2) return undefined;
+      return [paras[0], CERTAINTY[lang], ...paras.slice(1)].join('\n\n');
+    }
     case 'swap_answer': {
       const other = kase.swapWith ? byId.get(kase.swapWith) : undefined;
       return other ? other.answer : undefined;

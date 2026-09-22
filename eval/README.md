@@ -210,10 +210,13 @@ Three things to read here, in this order:
 2. **On `grounded`, the regexes beat the model** (6/7 vs 5/7). Where a
    deterministic check can exist it is cheaper, explainable and here more
    accurate; the judge earns its place on the dimensions that have none.
-3. **Three of the five misses are the same failure** — a clean answer with one
-   contradicting sentence appended, graded on the body and not the tail. Open,
-   written up in `docs/11` Feature 8 Issue 2, with the experiment that would
-   separate leniency from position bias.
+3. **Four of the five misses are a defect appended to an otherwise-clean
+   answer** — and all five verdicts justify the pass by describing what the
+   answer does well, never mentioning the defect at all. The judge did not
+   weigh the violation and let the body win; it never searched for it.
+   Length dilution and language are ruled out. Open, written up in `docs/11`
+   Feature 8 Issue 2, with `mid_certainty` as the mutation that separates
+   satisficing from position bias.
 
 The run is saved in `results/judge-calibration-2026-09-22.json` and can be
 re-scored with no provider: `npm run eval:judge -- --rescore <file>`.

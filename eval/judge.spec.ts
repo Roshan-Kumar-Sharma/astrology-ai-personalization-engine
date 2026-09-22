@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
+  CERTAINTY,
   DIMENSIONS,
   JudgeCase,
   MUTATIONS,
@@ -130,6 +131,29 @@ describe('mutations', () => {
     for (const p of probes) expect(deterministicChecks(p).hedged).toBe(true);
   });
 
+  it('mid_certainty moves the identical sentence into the body, changing nothing else', () => {
+    const end = probesFor('assert_certainty');
+    const mid = probesFor('mid_certainty');
+    // jq-08 is a single paragraph and has no middle, so it is skipped.
+    expect(mid.map((p) => p.caseId)).not.toContain('jq-08');
+    expect(mid).toHaveLength(CASES.length - 1);
+
+    for (const m of mid) {
+      const e = end.find((p) => p.caseId === m.caseId)!;
+      // Same words, different order: the only variable is position.
+      expect(m.answer.split(/\s+/).sort()).toEqual(e.answer.split(/\s+/).sort());
+      expect(m.answer).not.toBe(e.answer);
+      // The defect is in the body, not the last paragraph.
+      const paras = m.answer.split('\n\n');
+      expect(paras.length).toBeGreaterThan(2);
+      const lang = m.plan.style.languageCode as keyof typeof CERTAINTY;
+      expect(paras[1]).toBe(CERTAINTY[lang] ?? CERTAINTY.en);
+      expect(paras[paras.length - 1]).not.toContain('fixed');
+      // And it still evades the output regexes, like its end-placed twin.
+      expect(deterministicChecks(m).hedged).toBe(true);
+    }
+  });
+
   it('swap_answer applies only where a partner is named, and changes the text', () => {
     const probes = probesFor('swap_answer');
     expect(probes.map((p) => p.caseId).sort()).toEqual(
@@ -166,7 +190,7 @@ describe('mutations', () => {
     ).toBeUndefined();
   });
 
-  it('the full calibration run is 35 probes', () => {
+  it('the full calibration run is 42 probes', () => {
     const probes = buildProbes(CASES);
     const kinds = probes.reduce<Record<string, number>>((acc, p) => {
       acc[p.kind] = (acc[p.kind] ?? 0) + 1;
@@ -176,11 +200,12 @@ describe('mutations', () => {
       clean: 8,
       invent_planet: 8,
       assert_certainty: 8,
+      mid_certainty: 7,
       swap_answer: 4,
       wrong_language: 4,
       break_constraint: 3,
     });
-    expect(probes).toHaveLength(35);
+    expect(probes).toHaveLength(42);
   });
 });
 
