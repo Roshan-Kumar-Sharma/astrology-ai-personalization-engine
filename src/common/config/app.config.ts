@@ -30,6 +30,7 @@ const EnvSchema = z.object({
   UPSTREAM_KUNDLI_URL: z.string().default('http://127.0.0.1:4010'),
   UPSTREAM_HOROSCOPE_URL: z.string().default('http://127.0.0.1:4010'),
   UPSTREAM_PANCHANG_URL: z.string().default('http://127.0.0.1:4010'),
+  UPSTREAM_TRANSIT_URL: z.string().default('http://127.0.0.1:4010'),
 
   /** Start the bundled mock upstream server in-process. */
   MOCK_UPSTREAM_ENABLED: envBool(true),

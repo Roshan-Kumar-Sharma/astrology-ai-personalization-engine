@@ -1,4 +1,5 @@
 import { DomainCategory } from '../../astrology/types';
+import { Planet } from '../../astrology/zodiac';
 import { Horizon, Intent } from '../types';
 
 /**
@@ -19,9 +20,17 @@ import { Horizon, Intent } from '../types';
  */
 
 export interface HorizonOverride {
-  /** Raise to primary weight - these matter more at this horizon. */
+  /**
+   * Add `HORIZON_ADJUSTMENTS.promote` - these matter more at this horizon. A
+   * background item rises above the relevance floor; a secondary one rises to
+   * primary weight, and no further (the selector caps it there).
+   */
   promote?: string[];
-  /** Lower to neutral weight - still allowed, but only if budget remains. */
+  /**
+   * Add `HORIZON_ADJUSTMENTS.demote` - still allowed, but ranked lower. A
+   * primary item lands at secondary weight; a secondary one falls below the
+   * relevance floor and is excluded.
+   */
   demote?: string[];
   /** Remove entirely - actively misleading at this horizon. */
   drop?: string[];
@@ -41,6 +50,25 @@ export interface IntentRule {
   horizonOverrides?: Partial<Record<Horizon, HorizonOverride>>;
 }
 
+/**
+ * The transit facts a long horizon promotes.
+ *
+ * Deliberately not `derived.transit.*`. That wildcard also matches the
+ * house-relative facts (`derived.transit.jupiter.house.4`), and promotion adds
+ * enough weight to lift a neutral item over the relevance floor - so a year-
+ * horizon career question started sending "Jupiter over the 4th house", which
+ * has nothing to do with career, and squeezed the career horoscope out of a
+ * free-tier budget. Promotion may re-rank what a rule already admits; it must
+ * not admit what the rule left out. The house-relative facts earn their place
+ * only where a rule names the house.
+ */
+const TRANSIT_PROMOTE = [
+  'derived.transit.sade_sati',
+  'derived.transit.dhaiya',
+  'derived.transit.saturn',
+  'derived.transit.jupiter',
+];
+
 export const INTENT_RULES: Record<Intent, IntentRule> = {
   career: {
     intent: 'career',
@@ -53,6 +81,11 @@ export const INTENT_RULES: Record<Intent, IntentRule> = {
       'derived.dasha.position',
       'derived.dasha.transition',
       'derived.dasha.house_rulership',
+      // Saturn over the Moon (Sade Sati / dhaiya) or over the 10th is the
+      // classic "should I change my job" transit.
+      'derived.transit.sade_sati',
+      'derived.transit.dhaiya',
+      'derived.transit.saturn.house.10',
     ],
     secondary: [
       'derived.house.6', // service / daily work / competition
@@ -62,13 +95,19 @@ export const INTENT_RULES: Record<Intent, IntentRule> = {
       'derived.dasha.themes',
       'kundli.lagna',
       'horoscope.finance',
+      'derived.transit.saturn',
+      'derived.transit.jupiter',
+      'derived.transit.jupiter.house.10',
+      'derived.transit.saturn.house.6',
+      'derived.transit.jupiter.house.11',
+      'derived.transit.nodes',
     ],
     exclude: ['horoscope.relationship', 'horoscope.health', 'kundli.house.7', 'derived.house.7'],
     horizonOverrides: {
       today: {
         promote: ['panchang.*', 'derived.panchang.*'],
-        demote: ['derived.dasha.transition'],
-        why: 'A single day is governed by the panchang; a multi-year dasha arc cannot resolve to one day.',
+        demote: ['derived.dasha.transition', 'derived.transit.*'],
+        why: 'A single day is governed by the panchang; a multi-year dasha arc or a transit that lasts years cannot resolve to one day.',
       },
       week: {
         promote: ['derived.panchang.resonance'],
@@ -77,17 +116,19 @@ export const INTENT_RULES: Record<Intent, IntentRule> = {
       },
       quarter: {
         drop: ['panchang.*', 'derived.panchang.*'],
-        why: 'Panchang describes a single day and is actively misleading over a multi-month horizon.',
+        promote: TRANSIT_PROMOTE,
+        why: 'Panchang describes a single day and is actively misleading over a multi-month horizon. What it loses here the gochar gains: a Saturn or Jupiter transit is exactly a multi-month signal.',
       },
       year: {
         drop: ['panchang.*', 'derived.panchang.*'],
         demote: ['horoscope.*'],
-        why: 'Panchang describes one day and carries no signal across a year, so it is dropped. The daily horoscope is chart-derived and often echoes the running dasha, so it is down-ranked rather than discarded.',
+        promote: TRANSIT_PROMOTE,
+        why: 'Panchang describes one day and carries no signal across a year, so it is dropped. The daily horoscope is chart-derived and often echoes the running dasha, so it is down-ranked rather than discarded. The transits are promoted: a year is the scale they actually describe.',
       },
       lifetime: {
         drop: ['panchang.*', 'derived.panchang.*'],
-        demote: ['horoscope.*'],
-        why: 'Only the natal chart and the dasha arc are meaningful at this scale.',
+        demote: ['horoscope.*', 'derived.transit.*'],
+        why: 'Only the natal chart and the dasha arc are meaningful at this scale. A transit lasting two or three years is a current condition, not a life pattern, so it is down-ranked here too.',
       },
     },
   },
@@ -102,6 +143,12 @@ export const INTENT_RULES: Record<Intent, IntentRule> = {
       'horoscope.relationship',
       'derived.dasha.position',
       'derived.dasha.house_rulership',
+      // Jupiter's transit is the classical marriage-timing signal; Sade Sati
+      // colours every relationship question it overlaps.
+      'derived.transit.jupiter',
+      'derived.transit.jupiter.house.7',
+      'derived.transit.sade_sati',
+      'derived.transit.dhaiya',
     ],
     secondary: [
       'derived.house.5', // romance
@@ -110,20 +157,30 @@ export const INTENT_RULES: Record<Intent, IntentRule> = {
       'kundli.moonSign',
       'derived.dasha.themes',
       'derived.house.2', // family
+      'derived.transit.saturn',
+      'derived.transit.saturn.house.7',
     ],
     exclude: ['horoscope.career', 'horoscope.finance', 'kundli.house.10', 'derived.house.10'],
     horizonOverrides: {
       today: {
         promote: ['panchang.*', 'derived.panchang.*'],
-        demote: ['derived.dasha.transition'],
+        demote: ['derived.dasha.transition', 'derived.transit.*'],
         why: 'Same-day relationship questions are about mood and timing, not the life arc.',
       },
       quarter: {
         drop: ['panchang.*', 'derived.panchang.*'],
-        why: 'Daily almanac data does not extend across months.',
+        promote: TRANSIT_PROMOTE,
+        why: 'Daily almanac data does not extend across months; the slow transits are what does.',
       },
-      year: { drop: ['panchang.*', 'derived.panchang.*'], demote: ['horoscope.*'] },
-      lifetime: { drop: ['panchang.*', 'derived.panchang.*'], demote: ['horoscope.*'] },
+      year: {
+        drop: ['panchang.*', 'derived.panchang.*'],
+        demote: ['horoscope.*'],
+        promote: TRANSIT_PROMOTE,
+      },
+      lifetime: {
+        drop: ['panchang.*', 'derived.panchang.*'],
+        demote: ['horoscope.*', 'derived.transit.*'],
+      },
     },
   },
 
@@ -140,6 +197,13 @@ export const INTENT_RULES: Record<Intent, IntentRule> = {
       // is the constitution that resists it.
       'derived.house.1',
       'kundli.house.1',
+      // Saturn over the Moon, or over the houses of the body (1st), illness
+      // (6th) and crisis (8th), is the health transit that matters.
+      'derived.transit.sade_sati',
+      'derived.transit.dhaiya',
+      'derived.transit.saturn.house.6',
+      'derived.transit.saturn.house.1',
+      'derived.transit.saturn.house.8',
     ],
     secondary: [
       'derived.moon.placement', // Moon governs the mind; central to mental health
@@ -147,13 +211,22 @@ export const INTENT_RULES: Record<Intent, IntentRule> = {
       'derived.dasha.position',
       'derived.dasha.themes',
       'panchang.nakshatra',
+      'derived.transit.saturn',
+      'derived.transit.jupiter',
     ],
     exclude: ['horoscope.finance', 'horoscope.career', 'kundli.house.10', 'derived.house.10'],
     horizonOverrides: {
-      today: { promote: ['panchang.*', 'derived.panchang.*'] },
-      quarter: { drop: ['panchang.*', 'derived.panchang.*'] },
-      year: { drop: ['panchang.*', 'derived.panchang.*'], demote: ['horoscope.*'] },
-      lifetime: { drop: ['panchang.*', 'derived.panchang.*'], demote: ['horoscope.*'] },
+      today: { promote: ['panchang.*', 'derived.panchang.*'], demote: ['derived.transit.*'] },
+      quarter: { drop: ['panchang.*', 'derived.panchang.*'], promote: TRANSIT_PROMOTE },
+      year: {
+        drop: ['panchang.*', 'derived.panchang.*'],
+        demote: ['horoscope.*'],
+        promote: TRANSIT_PROMOTE,
+      },
+      lifetime: {
+        drop: ['panchang.*', 'derived.panchang.*'],
+        demote: ['horoscope.*', 'derived.transit.*'],
+      },
     },
   },
 
@@ -168,6 +241,13 @@ export const INTENT_RULES: Record<Intent, IntentRule> = {
       'kundli.house.11',
       'horoscope.finance',
       'derived.dasha.position',
+      // Jupiter is the natural significator of wealth; its transit over the
+      // Moon or over the money houses is the finance transit.
+      'derived.transit.jupiter',
+      'derived.transit.jupiter.house.2',
+      'derived.transit.jupiter.house.11',
+      'derived.transit.sade_sati',
+      'derived.transit.dhaiya',
     ],
     secondary: [
       'derived.dasha.house_rulership',
@@ -175,13 +255,24 @@ export const INTENT_RULES: Record<Intent, IntentRule> = {
       'horoscope.career',
       'derived.house.10',
       'kundli.lagna',
+      'derived.transit.saturn',
+      'derived.transit.saturn.house.2',
+      'derived.transit.saturn.house.11',
+      'derived.transit.nodes',
     ],
     exclude: ['horoscope.relationship', 'horoscope.health', 'kundli.house.7', 'derived.house.7'],
     horizonOverrides: {
-      today: { promote: ['panchang.*', 'derived.panchang.*'] },
-      quarter: { drop: ['panchang.*', 'derived.panchang.*'] },
-      year: { drop: ['panchang.*', 'derived.panchang.*'], demote: ['horoscope.*'] },
-      lifetime: { drop: ['panchang.*', 'derived.panchang.*'], demote: ['horoscope.*'] },
+      today: { promote: ['panchang.*', 'derived.panchang.*'], demote: ['derived.transit.*'] },
+      quarter: { drop: ['panchang.*', 'derived.panchang.*'], promote: TRANSIT_PROMOTE },
+      year: {
+        drop: ['panchang.*', 'derived.panchang.*'],
+        demote: ['horoscope.*'],
+        promote: TRANSIT_PROMOTE,
+      },
+      lifetime: {
+        drop: ['panchang.*', 'derived.panchang.*'],
+        demote: ['horoscope.*', 'derived.transit.*'],
+      },
     },
   },
 
@@ -209,6 +300,10 @@ export const INTENT_RULES: Record<Intent, IntentRule> = {
       'derived.dasha.position',
       'derived.dasha.themes',
       'panchang.karana',
+      // Backdrop only: a day is not characterised by a multi-year transit, but
+      // a user in Sade Sati should not be told about their day as if it were not.
+      'derived.transit.sade_sati',
+      'derived.transit.dhaiya',
     ],
     exclude: [],
     horizonOverrides: {
@@ -233,8 +328,20 @@ export const INTENT_RULES: Record<Intent, IntentRule> = {
       'panchang.tithi',
       'panchang.nakshatra',
       'derived.panchang.resonance',
+      // Remedies for Shani are the single most common spiritual request, and
+      // they only make sense if the engine knows a Saturn transit is running.
+      'derived.transit.sade_sati',
+      'derived.transit.dhaiya',
     ],
-    secondary: ['derived.moon.placement', 'kundli.moonSign', 'kundli.lagna', 'panchang.yoga'],
+    secondary: [
+      'derived.moon.placement',
+      'kundli.moonSign',
+      'kundli.lagna',
+      'panchang.yoga',
+      'derived.transit.saturn',
+      'derived.transit.jupiter',
+      'derived.transit.nodes',
+    ],
     exclude: ['horoscope.finance', 'horoscope.career'],
   },
 
@@ -252,6 +359,10 @@ export const INTENT_RULES: Record<Intent, IntentRule> = {
       'derived.dasha.transition',
       'kundli.lagna',
       'kundli.moonSign',
+      // "Is my Sade Sati over?" has no life-area and lands here. It must be
+      // answerable.
+      'derived.transit.sade_sati',
+      'derived.transit.dhaiya',
     ],
     secondary: [
       'derived.dasha.themes',
@@ -263,12 +374,19 @@ export const INTENT_RULES: Record<Intent, IntentRule> = {
       'derived.house.10',
       'panchang.nakshatra',
       'derived.panchang.resonance',
+      'derived.transit.saturn',
+      'derived.transit.jupiter',
+      'derived.transit.nodes',
     ],
     exclude: [],
     horizonOverrides: {
-      today: { promote: ['panchang.*', 'derived.panchang.*', 'horoscope.*'] },
-      quarter: { drop: ['panchang.*', 'derived.panchang.*'] },
-      year: { drop: ['panchang.*', 'derived.panchang.*'] },
+      today: {
+        promote: ['panchang.*', 'derived.panchang.*', 'horoscope.*'],
+        demote: ['derived.transit.*'],
+      },
+      quarter: { drop: ['panchang.*', 'derived.panchang.*'], promote: TRANSIT_PROMOTE },
+      year: { drop: ['panchang.*', 'derived.panchang.*'], promote: TRANSIT_PROMOTE },
+      lifetime: { drop: ['panchang.*', 'derived.panchang.*'], demote: ['derived.transit.*'] },
     },
   },
 };
@@ -284,6 +402,37 @@ export const HORIZON_ADJUSTMENTS = {
   promote: 60,
   demote: -45,
 } as const;
+
+/**
+ * What a question that names a planet pulls forward.
+ *
+ * Same weight as a horizon promotion, applied on top of it. Naming Saturn is a
+ * stronger statement of relevance than any rule can infer from a life-area, so
+ * the Saturn facts - including where Saturn sits in *this* chart - are lifted
+ * even for an intent that would otherwise leave them as background. Bare
+ * "gochar"/"transit" promotes every slow mover.
+ */
+export const FOCUS_PROMOTE: Partial<Record<Planet, string[]>> = {
+  Saturn: [
+    'derived.transit.sade_sati',
+    'derived.transit.dhaiya',
+    'derived.transit.saturn',
+    'derived.transit.saturn.house.*',
+  ],
+  Jupiter: ['derived.transit.jupiter', 'derived.transit.jupiter.house.*'],
+  Rahu: ['derived.transit.nodes'],
+  Ketu: ['derived.transit.nodes'],
+};
+
+export const GOCHAR_PROMOTE = [
+  'derived.transit.sade_sati',
+  'derived.transit.dhaiya',
+  'derived.transit.saturn',
+  'derived.transit.jupiter',
+  'derived.transit.nodes',
+];
+
+export const FOCUS_ADJUSTMENT = 60;
 
 /** Multipliers applied for how much we trust an item. */
 export const CONFIDENCE_MULTIPLIER: Record<'high' | 'medium' | 'low', number> = {

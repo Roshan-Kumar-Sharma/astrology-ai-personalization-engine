@@ -201,6 +201,82 @@ sub-period."* It converts the least personal data source into a personalised one
 
 ---
 
+## Gochar — transits, and Sade Sati
+
+Everything above is *fixed at birth* except the dasha pointer. The gochar is the
+other moving part: where the planets are **now**, read against the natal chart.
+
+Only the slow movers matter for this: Saturn takes about **2.5 years** to cross
+a sign, Jupiter about **1 year**, Rahu and Ketu about **1.5 years**. The faster
+planets change sign within days or weeks, and that rhythm is already in the
+panchang (the nakshatra *is* the Moon's position). Slow transits are what can
+characterise a month, a quarter or a year — which is exactly the horizon band
+where the panchang has nothing to say. In the selection rules the two move in
+opposite directions as the horizon widens: the almanac is dropped, the gochar
+is promoted.
+
+### Counted from the Moon, and why that matters here
+
+Classical gochar counts a transiting planet's position **from the natal Moon
+sign**, not from the lagna. That is not a stylistic detail for this engine: the
+Moon sign survives a birth time that is wrong by hours, so **every Moon-relative
+transit remains sound for a user whose houses have been suppressed**. `user_103`
+has no birth time and no usable houses, and still gets a correct Sade Sati
+reading. "Saturn is transiting your 6th house" needs the lagna and is never
+built for that chart. Same sky, two facts, one sound.
+
+### Sade Sati — the seven-and-a-half years
+
+Saturn spends ~2.5 years in each of three consecutive signs: the one *before* the
+Moon sign, the Moon sign itself, and the one *after*. That is Sade Sati
+(*sāṛhe sātī*, "seven and a half"): three phases, ~7.5 years, and the single most
+asked-about transit in India.
+
+| Saturn is in the … from the Moon | Phase | Name |
+|---|---|---|
+| 12th | first | rising |
+| 1st | second | peak |
+| 2nd | third | setting |
+
+Two shorter Saturn transits carry their own names: **Kantaka Shani** (4th from
+the Moon) and **Ashtama Shani** (8th), each ~2.5 years, together called the
+*dhaiya* or "small panoti". Saturn in the 3rd, 6th or 11th is classically easy.
+
+The arithmetic, with `user_103` (Moon in Aquarius) and Saturn at 7° Pisces:
+
+```
+Pisces is the 2nd sign from Aquarius        -> setting phase (third of three)
+7 / 30 degrees                               -> 23% through this phase
+(1 - 0.23) x 29.5 months per sign            -> ~23 months of this phase left
+phase index 2 x 30 + 7 = 67 of 90 degrees    -> 74% through the whole cycle
+(1 - 0.744) x 3 x 29.5                       -> ~23 months of Sade Sati left
+```
+
+`29.5` is Saturn's orbital period (29.457 years) divided by twelve, in months.
+It is a *mean* motion: real Saturn spends about a third of every year moving
+backwards, so these are estimates and are worded as estimates.
+
+### Jupiter and the nodes
+
+Jupiter is read the same way. The classical supportive positions from the Moon
+are the **2nd, 5th, 7th, 9th and 11th**; Jupiter over the 7th is the
+marriage-timing transit, and Jupiter over the 2nd or 11th the money one. Its
+dignity applies: exalted in Cancer, debilitated in Capricorn.
+
+Rahu and Ketu are always exactly opposite each other and move **backwards**
+through the zodiac — Rahu enters a sign at 30° and leaves at 0°. Forgetting this
+inverts every "months remaining" figure, and there is a unit test whose only job
+is to remember it.
+
+### How the engine phrases it
+
+Every transit statement ends the same way: *"a climate, not a verdict."* The
+classical texts are blunt about Saturn, and a self-service product must not be.
+The prompt's safety constraints say the same thing; the fact says it first, so
+the model is never handed a raw "this is a bad period" to soften on its own.
+
+---
+
 ## Dignity — how strong a planet is
 
 A planet's strength depends on the sign it occupies:
@@ -236,7 +312,7 @@ Being able to list these — and say why — matters more than having built them
 
 | Concept | What it is | Why not |
 |---|---|---|
-| **Transits (gochar)** | Where planets are *now* vs at birth | **The biggest gap.** Saturn crossing the 10th house is *the* classic career-change trigger, and Sade Sati is the most-asked question in India. Requires a transit service that does not exist in the brief. |
+| ~~**Transits (gochar)**~~ | Where planets are *now* vs at birth | **Built** — see [Gochar](#gochar--transits-and-sade-sati). Needed a fifth, transit service that the brief did not provide; the bundled mock supplies one, propagated by mean motion. |
 | **Divisional charts (D-10 etc.)** | Sub-charts for specific domains — D-10 is *the* career chart | Not in the given payload. A serious career reading would use it. |
 | **Aspects (drishti)** | Planets influencing houses at a distance | Requires planetary positions; payload gives house lords only |
 | **Yogas** | Named planetary combinations (Raj Yoga, Gaja Kesari) | Requires full positions; combinatorially large |
@@ -244,10 +320,11 @@ Being able to list these — and say why — matters more than having built them
 | **Mangal Dosha / Kuja** | Mars affliction affecting marriage | Requires Mars's house placement, not just lordship |
 | **Ashtakoot Guna Milan** | 36-point compatibility scoring | Needs two charts; no compatibility intent |
 
-**The honest summary:** the payload gives house *lords* and *strength labels*,
-not planetary *positions in degrees*. That ceiling is what limits the depth of
-inference — and naming that ceiling precisely is a stronger answer than listing
-techniques.
+**The honest summary:** the natal payload gives house *lords* and *strength
+labels*, not planetary *positions in degrees*. That ceiling is what limits the
+depth of natal inference — and naming that ceiling precisely is a stronger
+answer than listing techniques. The transit service is the one place the engine
+now has degrees, and it uses them only for "how far through this sign".
 
 ---
 

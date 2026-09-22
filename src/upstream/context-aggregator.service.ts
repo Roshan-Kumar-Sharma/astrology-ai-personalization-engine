@@ -10,6 +10,7 @@ import {
   Kundli,
   Panchang,
   SourceResult,
+  Transits,
   UpstreamName,
   UserProfile,
 } from './types';
@@ -41,6 +42,7 @@ export class ContextAggregator {
       kundli: undefined,
       horoscope: undefined,
       panchang: undefined,
+      transit: undefined,
     };
 
     const track = <T>(name: UpstreamName, p: Promise<SourceResult<T>>) =>
@@ -81,6 +83,10 @@ export class ContextAggregator {
         'panchang',
         this.client.fetch<Panchang>('panchang', this.cfg.UPSTREAM_PANCHANG_URL, '/panchang', trace),
       ),
+      track(
+        'transit',
+        this.client.fetch<Transits>('transit', this.cfg.UPSTREAM_TRANSIT_URL, '/transits', trace),
+      ),
     ];
 
     // A whole-stage deadline on top of the per-source timeouts. Per-source
@@ -100,6 +106,7 @@ export class ContextAggregator {
       kundli: (slots.kundli ?? abandoned('kundli')) as SourceResult<Kundli>,
       horoscope: (slots.horoscope ?? abandoned('horoscope')) as SourceResult<Horoscope>,
       panchang: (slots.panchang ?? abandoned('panchang')) as SourceResult<Panchang>,
+      transit: (slots.transit ?? abandoned('transit')) as SourceResult<Transits>,
     };
 
     const elapsed = performance.now() - started;

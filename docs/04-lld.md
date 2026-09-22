@@ -112,7 +112,7 @@ interface ContextItem {
 }
 ```
 
-**Why flatten?** Upstream data arrives as four nested documents, but relevance is
+**Why flatten?** Upstream data arrives as five nested documents, but relevance is
 per-fact: the 10th house matters for career, the 7th in the same document does
 not. Keeping documents whole forces an all-or-nothing choice.
 
@@ -183,14 +183,14 @@ retry(fn, { attempts, baseDelayMs, isRetryable, onRetry })
 ```
 
 **Full jitter**: `delay = random(0, base × 2^n)`. Not fixed backoff, because
-every request fans out to four upstreams simultaneously — without jitter a blip
+every request fans out to five upstreams simultaneously — without jitter a blip
 causes all callers to retry in lockstep and stampede the recovering service.
 
 `isRetryable` excludes 4xx: a 404 will fail identically on retry.
 
 ### `upstream/upstream.client.ts`
 
-One generic client for all four services. Resilience is cross-cutting, so it
+One generic client for all five services. Resilience is cross-cutting, so it
 lives here once rather than being reimplemented per service.
 
 ```

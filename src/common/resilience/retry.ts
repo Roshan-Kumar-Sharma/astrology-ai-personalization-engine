@@ -43,7 +43,7 @@ export interface RetryOptions {
  * Retry with exponential backoff and full jitter.
  *
  * Full jitter (delay = random(0, base * 2^n)) rather than fixed backoff, because
- * every request in this service fans out to four upstreams at once. Without
+ * every request in this service fans out to five upstreams at once. Without
  * jitter a blip causes all callers to retry in lockstep and stampede the
  * recovering service.
  */

@@ -163,6 +163,112 @@ describe('ContextSelector', () => {
     });
   });
 
+  describe('transits', () => {
+    const withTransits = [
+      ...CANDIDATES,
+      item('derived.transit.sade_sati'),
+      item('derived.transit.saturn'),
+      item('derived.transit.jupiter'),
+      item('derived.transit.nodes'),
+      item('derived.transit.saturn.house.6'),
+      item('derived.transit.jupiter.house.4'),
+    ];
+    const unknownBirthTime: ChartReliability = {
+      birthTime: 'unknown',
+      housesUsable: false,
+      inconsistencies: [],
+      notes: [],
+    };
+
+    it('keeps the Moon-relative transits and drops the house-relative ones when houses are unsound', () => {
+      const r = select('career', 'unspecified', withTransits, 1000, unknownBirthTime);
+      // Sade Sati is counted from the Moon sign, which an unknown birth time
+      // leaves intact.
+      expect(ids(r)).toContain('derived.transit.sade_sati');
+      // "Saturn over the 6th house" needs the lagna, which it does not.
+      expect(ids(r)).not.toContain('derived.transit.saturn.house.6');
+      expect(excludedFor(r, 'derived.transit.saturn.house.6')?.reason).toBe('reliability');
+    });
+
+    it('demotes transits at a today horizon and promotes them at a year horizon', () => {
+      const today = select('career', 'today', withTransits);
+      const year = select('career', 'year', withTransits);
+      const score = (r: ReturnType<ContextSelector['select']>, id: string) =>
+        r.selected.find((i) => i.id === id)?.score ?? 0;
+      expect(score(year, 'derived.transit.saturn')).toBeGreaterThan(
+        score(today, 'derived.transit.saturn'),
+      );
+      expect(excludedFor(today, 'derived.transit.saturn')?.reason).toBe('rule:below-threshold');
+    });
+
+    /**
+     * The bug the golden eval caught: promoting `derived.transit.*` by
+     * wildcard lifted "Jupiter over the 4th house" - background for a career
+     * question - over the relevance floor. Promotion may re-rank what a rule
+     * admits; it must not admit what the rule left out.
+     */
+    it('never promotes a secondary item past primary weight', () => {
+      const year = select('career', 'year', withTransits);
+      const saturn = year.selected.find((i) => i.id === 'derived.transit.saturn')!;
+      const tenth = year.selected.find((i) => i.id === 'kundli.house.10')!;
+      expect(saturn.tier).toBe('secondary');
+      expect(saturn.score).toBe(tenth.score);
+      expect(saturn.reason).toContain('capped at primary weight');
+    });
+
+    it('does not let a horizon promotion admit an irrelevant house transit', () => {
+      const r = select('career', 'year', withTransits);
+      expect(ids(r)).not.toContain('derived.transit.jupiter.house.4');
+      expect(excludedFor(r, 'derived.transit.jupiter.house.4')?.reason).toBe(
+        'rule:below-threshold',
+      );
+    });
+
+    it('promotes the facts about a planet the question names', () => {
+      const plain = select('general', 'unspecified', withTransits);
+      const named = new ContextSelector().select({
+        items: withTransits,
+        intent: 'general',
+        secondaryIntents: [],
+        horizon: 'unspecified',
+        tokenBudget: 1000,
+        reliability: reliable,
+        focus: ['Saturn'],
+      });
+      const score = (r: ReturnType<ContextSelector['select']>, id: string) =>
+        r.selected.find((i) => i.id === id)?.score ?? 0;
+      expect(score(named, 'derived.transit.saturn')).toBeGreaterThan(
+        score(plain, 'derived.transit.saturn'),
+      );
+      // ...but only up to primary weight. Naming Saturn must not bury the
+      // facts the intent itself named as primary.
+      expect(score(named, 'derived.transit.saturn')).toBe(100);
+      // Naming Saturn even admits where Saturn sits in this chart, which a
+      // general question would otherwise leave as background.
+      expect(ids(plain)).not.toContain('derived.transit.saturn.house.6');
+      expect(ids(named)).toContain('derived.transit.saturn.house.6');
+      expect(named.selected.find((i) => i.id === 'derived.transit.saturn')?.reason).toContain(
+        'names Saturn',
+      );
+      // Jupiter is untouched.
+      expect(score(named, 'derived.transit.jupiter')).toBe(score(plain, 'derived.transit.jupiter'));
+    });
+
+    it('a named planet cannot resurrect a house transit the reliability gate removed', () => {
+      const r = new ContextSelector().select({
+        items: withTransits,
+        intent: 'general',
+        secondaryIntents: [],
+        horizon: 'unspecified',
+        tokenBudget: 100_000,
+        reliability: unknownBirthTime,
+        focus: ['Saturn'],
+      });
+      expect(ids(r)).toContain('derived.transit.saturn');
+      expect(ids(r)).not.toContain('derived.transit.saturn.house.6');
+    });
+  });
+
   describe('budget', () => {
     it('packs by priority and reports what did not fit', () => {
       const r = select('career', 'unspecified', CANDIDATES, 25);

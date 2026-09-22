@@ -19,12 +19,13 @@ flowchart TD
     C --> C2[Kundli Service]
     C --> C3[Horoscope Service]
     C --> C4[Panchang Service]
-    C1 & C2 & C3 & C4 --> D
+    C --> C5[Transit Service]
+    C1 & C2 & C3 & C4 & C5 --> D
 
     D["ContextBundle<br/><i>per-source outcome: ok · cached · stale · failed</i>"]
 
-    D --> E["3. Intent + time horizon<br/><i>lexicon, sub-ms, multilingual</i>"]
-    E --> F["4. Astrological inference<br/><i>dasha position · house lords · dignity · chart validation</i>"]
+    D --> E["3. Intent + time horizon + focus<br/><i>lexicon, sub-ms, multilingual</i>"]
+    E --> F["4. Astrological inference<br/><i>dasha position · house lords · dignity · gochar · chart validation</i>"]
     F --> G["5. Response style<br/><i>language · tone · length · jargon</i>"]
     G --> H["6. Context selection<br/><i>rules → score → relevance floor → token budget</i>"]
     H --> I["PersonalizationPlan<br/><i>the complete decision record</i>"]
@@ -190,6 +191,7 @@ sharply between them.
 | Daily horoscope       | primary                  | secondary                       |
 | Current dasha         | secondary                | **primary** — multi-month arc   |
 | Dasha transition      | demoted                  | **primary** — chapter boundary  |
+| Saturn / Jupiter transit | demoted — years cannot resolve to a day | **promoted** — the multi-month signal |
 
 So selection keys on `(intent × horizon)`, and both live in
 `src/personalization/config/intent-rules.config.ts` as data.

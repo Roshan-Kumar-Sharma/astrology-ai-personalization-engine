@@ -130,13 +130,14 @@ The shape the brief specifies, plus an `explain` block:
   "explain": {
     "intentDetection": { "intent": "career", "confidence": 0.98, "method": "lexicon", "secondaryIntents": [], "rule": "Work, job change, promotion…" },
     "timeHorizon": { "horizon": "quarter", "effect": "Panchang describes a single day and is actively misleading over a multi-month horizon." },
+    "focus": [],
     "responseStyle": { … },
     "chartReliability": { "birthTime": "exact", "housesUsable": true, "inconsistencies": [], "notes": [] },
     "selected": [ { "id": "derived.house.10", "label": "10th House", "tier": "primary", "score": 100, "tokens": 24, "why": "primary source for career", "text": "House 10 (career…) falls in Cancer…" } ],
     "excluded": [ { "id": "horoscope.relationship", "label": "Relationship Horoscope", "reason": "rule:excluded", "detail": "Not relevant to a career question; excluded by rule." } ],
     "tokenBudget": { "budget": 900, "contextTokensUsed": 330, "contextTokensAvailable": 606, "naiveRawJsonDumpTokens": 230, "savedPct": 46, "promptTokens": { … } },
     "safety": { "blocked": false, "policies": [], "injectedConstraints": [ … ], "escalateToHuman": false },
-    "upstream": { "kundli": { "outcome": "ok", "latencyMs": 41, "attempts": 1 }, … },
+    "upstream": { "kundli": { "outcome": "ok", "latencyMs": 41, "attempts": 1 }, "transit": { … }, … },
     "projectedConfidence": { "label": "HIGH", "score": 1, "factors": [ … ], "caps": [] },
     "notes": [ "Intent \"career\" (lexicon, confidence 0.98) from: job, changing my job", … ],
     "latency": { … },
@@ -144,6 +145,14 @@ The shape the brief specifies, plus an `explain` block:
   }
 }
 ```
+
+### `focus`
+
+The planets the question names outright — `["Saturn"]` for *"Is my Sade Sati
+over?"*, `[]` for most questions. Read by a third deterministic extractor
+alongside intent and horizon; each named planet's transit facts are promoted in
+selection, and the ledger says so (`promoted: the question names Saturn`).
+Naming a planet never changes the intent.
 
 ### Exclusion reasons
 
@@ -226,6 +235,7 @@ When `MOCK_UPSTREAM_ENABLED=true` (default), these are served on port `4010`:
 | `GET /kundli/:userId` | Birth chart |
 | `GET /horoscope/:userId` | Daily horoscope (`?date=` optional) |
 | `GET /panchang` | Daily almanac (`?date=` optional) |
+| `GET /transits` | Sidereal positions of Saturn, Jupiter, Rahu and Ketu (`?date=` optional; propagated by mean motion, not an ephemeris) |
 | `GET /health` | Liveness |
 
 Any endpoint accepts `?fail=1` to force a `503`, for scripted degradation demos.

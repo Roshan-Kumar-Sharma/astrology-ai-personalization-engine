@@ -15,6 +15,11 @@ import { UpstreamName } from './types';
  *                midnight. We approximate sunrise as 06:00 IST.
  *  - user      : mutable at any moment (the user can change language or tone in
  *                the app and expects the next answer to reflect it). Short TTL.
+ *  - transit   : the slow movers barely move. Saturn covers ~0.03 degrees a day,
+ *                Jupiter ~0.08, the nodes ~0.05 - so a position a week old is
+ *                wrong by well under a degree, and only a sign ingress inside
+ *                that week could change a conclusion. Fresh for the calendar
+ *                day (the payload is dated), stale for a week.
  */
 export interface CacheTtl {
   freshMs: number;
@@ -43,6 +48,8 @@ export function cacheTtlFor(source: UpstreamName, now = new Date()): CacheTtl {
       return { freshMs: msUntilIstHour(6, now), staleMs: 12 * 60 * 60_000 };
     case 'user':
       return { freshMs: 60_000, staleMs: 10 * 60_000 };
+    case 'transit':
+      return { freshMs: msUntilIstHour(0, now), staleMs: 7 * 24 * 60 * 60_000 };
   }
 }
 
@@ -54,7 +61,11 @@ export function cacheTtlFor(source: UpstreamName, now = new Date()): CacheTtl {
  */
 export const SOURCE_CRITICALITY: Record<UpstreamName, number> = {
   user: 0.15,
-  kundli: 0.45,
-  horoscope: 0.3,
+  kundli: 0.4,
+  horoscope: 0.25,
   panchang: 0.1,
+  // Transits colour an answer rather than carry it: without them the dasha and
+  // the natal chart still give a complete, personal reading. Losing them costs
+  // about what losing the panchang does. The weights still sum to 1.
+  transit: 0.1,
 };

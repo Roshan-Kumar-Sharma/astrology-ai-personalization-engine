@@ -1,4 +1,4 @@
-import { Horoscope, Kundli, UserProfile } from '../types';
+import { Horoscope, Kundli, Transits, UserProfile } from '../types';
 
 /**
  * Fixtures for the bundled mock upstream.
@@ -251,6 +251,67 @@ export function panchangFor(dateIso: string) {
     nakshatra: NAKSHATRAS[mod(dayIndex, 27)],
     yoga: YOGAS[mod(dayIndex, 27)],
     karana: KARANAS[mod(dayIndex, 7)],
+  };
+}
+
+// --- Transits -------------------------------------------------------------
+// NOTE: like the panchang above, a deterministic stand-in, NOT an ephemeris.
+//
+// Positions are propagated from a reference epoch by *mean* daily motion, which
+// ignores retrograde loops entirely. Real Saturn spends about a third of every
+// year moving backwards; here it never does. What this preserves is the thing
+// the engine actually reasons about - which sign each slow mover occupies and
+// roughly how far through it - and it lets the sky move: query a date a year
+// out and Saturn changes sign, which is how the Sade Sati experiments in
+// docs/11 work.
+//
+// Reference positions are approximately right for the epoch under the Lahiri
+// ayanamsa (Saturn in early Pisces, Jupiter in early Cancer, Rahu in late
+// Aquarius). Do not cite the degrees as fact.
+
+const TRANSIT_EPOCH_MS = Date.parse('2026-09-15T00:00:00Z');
+
+/** Absolute sidereal longitude at the epoch, and mean motion in degrees/day. */
+const TRANSIT_MODEL: Record<'Saturn' | 'Jupiter' | 'Rahu', { lon: number; perDay: number }> = {
+  // 360 / (29.457 y * 365.25 d)
+  Saturn: { lon: 330 + 7, perDay: 0.03347 },
+  // 360 / (11.862 y * 365.25 d)
+  Jupiter: { lon: 90 + 10, perDay: 0.08309 },
+  // The nodes move backwards: -360 / (18.613 y * 365.25 d)
+  Rahu: { lon: 300 + 4, perDay: -0.05295 },
+};
+
+const SIGN_NAMES = [
+  'Aries',
+  'Taurus',
+  'Gemini',
+  'Cancer',
+  'Leo',
+  'Virgo',
+  'Libra',
+  'Scorpio',
+  'Sagittarius',
+  'Capricorn',
+  'Aquarius',
+  'Pisces',
+];
+
+export function transitsFor(dateIso: string): Transits {
+  const days = (Date.parse(`${dateIso}T00:00:00Z`) - TRANSIT_EPOCH_MS) / 86_400_000;
+  const at = (planet: keyof typeof TRANSIT_MODEL, offsetDeg = 0) => {
+    const m = TRANSIT_MODEL[planet];
+    const lon = mod(m.lon + m.perDay * days + offsetDeg, 360);
+    return { sign: SIGN_NAMES[Math.floor(lon / 30)], degree: Math.round((lon % 30) * 10) / 10 };
+  };
+  return {
+    date: dateIso,
+    positions: {
+      Saturn: at('Saturn'),
+      Jupiter: at('Jupiter'),
+      Rahu: at('Rahu'),
+      // Ketu is always exactly opposite Rahu.
+      Ketu: at('Rahu', 180),
+    },
   };
 }
 

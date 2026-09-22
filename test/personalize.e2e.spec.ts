@@ -28,6 +28,7 @@ const TEST_ENV = {
   UPSTREAM_KUNDLI_URL: `http://127.0.0.1:${PORT}`,
   UPSTREAM_HOROSCOPE_URL: `http://127.0.0.1:${PORT}`,
   UPSTREAM_PANCHANG_URL: `http://127.0.0.1:${PORT}`,
+  UPSTREAM_TRANSIT_URL: `http://127.0.0.1:${PORT}`,
   LLM_PROVIDER: 'mock',
   LOG_LEVEL: 'error',
 };
@@ -75,9 +76,15 @@ describe('Personalized AI Context Engine (e2e)', () => {
       expect(typeof res.body.answer).toBe('string');
       expect(res.body.answer.length).toBeGreaterThan(50);
       expect(['HIGH', 'MEDIUM', 'LOW']).toContain(res.body.confidence);
+      // The mock provider cites the first four items of the prompt, and at a
+      // "next few months" horizon several primaries tie and are ordered by
+      // token cost - so which dasha item makes the cut is a tie-break, not a
+      // contract. What is contractual: the career sources lead, and the answer
+      // rests on the running dasha in some form.
       expect(res.body.sourcesUsed).toEqual(
-        expect.arrayContaining(['Career Horoscope', '10th House', 'Current Dasha']),
+        expect.arrayContaining(['Career Horoscope', '10th House']),
       );
+      expect(res.body.sourcesUsed.some((s: string) => /Dasha/.test(s))).toBe(true);
     });
 
     it('does not leak relationship context into a career answer', async () => {
@@ -233,6 +240,45 @@ describe('Personalized AI Context Engine (e2e)', () => {
       }
     });
 
+    describe('transits (gochar)', () => {
+      it('reads Sade Sati from the Moon sign even when the birth time is unknown', async () => {
+        const res = await debug({ userId: 'user_103', question: 'Is my Sade Sati over?' }).expect(
+          200,
+        );
+        const ids = res.body.explain.selected.map((i: { id: string }) => i.id);
+        expect(ids).toContain('derived.transit.sade_sati');
+        // Nothing house-relative was built for this chart at all.
+        expect(ids.some((id: string) => /transit\.\w+\.house\./.test(id))).toBe(false);
+        const fact = res.body.explain.selected.find(
+          (i: { id: string }) => i.id === 'derived.transit.sade_sati',
+        );
+        expect(fact.text).toMatch(/Sade Sati, setting/);
+        expect(fact.text).toMatch(/a climate, not a verdict/);
+      });
+
+      it('promotes the facts about a planet the question names', async () => {
+        const plain = await debug({ userId: 'user_102', question: 'How are things?' });
+        const named = await debug({ userId: 'user_102', question: 'Is Sade Sati affecting me?' });
+        expect(named.body.explain.focus).toEqual(['Saturn']);
+        const score = (r: typeof plain, id: string) =>
+          r.body.explain.selected.find((i: { id: string }) => i.id === id)?.score ?? 0;
+        expect(score(named, 'derived.transit.saturn')).toBeGreaterThan(
+          score(plain, 'derived.transit.saturn'),
+        );
+      });
+
+      it('moves the transits the opposite way to the panchang as the horizon widens', async () => {
+        const today = await debug({ userId: 'user_101', question: 'How is my job today?' });
+        const year = await debug({ userId: 'user_101', question: 'How is my job this year?' });
+        const has = (r: typeof today, id: string) =>
+          r.body.explain.selected.some((i: { id: string }) => i.id === id);
+        expect(has(today, 'panchang.tithi')).toBe(true);
+        expect(has(today, 'derived.transit.saturn')).toBe(false);
+        expect(has(year, 'panchang.tithi')).toBe(false);
+        expect(has(year, 'derived.transit.saturn')).toBe(true);
+      });
+    });
+
     it('shows the time horizon changing what is selected', async () => {
       const today = await debug({ userId: 'user_101', question: 'How is my job today?' });
       const quarter = await debug({
@@ -252,6 +298,7 @@ describe('Personalized AI Context Engine (e2e)', () => {
     it('reports upstream health and prompt size without generating', async () => {
       const res = await debug({ userId: 'user_101', question: 'How is my week?' }).expect(200);
       expect(res.body.explain.upstream.kundli.outcome).toMatch(/ok|cached/);
+      expect(res.body.explain.upstream.transit.outcome).toMatch(/ok|cached/);
       expect(res.body.explain.tokenBudget.promptTokens.total).toBeGreaterThan(0);
       expect(res.body.explain.promptPreview).toContain('CONTEXT');
       expect(res.body.explain).not.toHaveProperty('answer');
@@ -311,8 +358,49 @@ describe('Personalized AI Context Engine (e2e)', () => {
           if (claim.panchangUsed !== undefined) {
             expect(/Panchang|Tithi|Nakshatra|Yoga|Karana/.test(selected)).toBe(claim.panchangUsed);
           }
+          if (claim.selects) {
+            const ids = e.selected.map((i: { id: string }) => i.id);
+            for (const id of claim.selects) expect(ids).toContain(id);
+          }
         });
       }
+    });
+  });
+
+  describe('with the transit service unreachable', () => {
+    let noTransit: INestApplication;
+
+    beforeAll(async () => {
+      const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+        .overrideProvider(APP_CONFIG)
+        // Port 1 is reserved and never listening: an immediate connection refusal.
+        .useValue(loadConfig({ ...TEST_ENV, UPSTREAM_TRANSIT_URL: 'http://127.0.0.1:1' }))
+        .compile();
+      noTransit = moduleRef.createNestApplication();
+      await noTransit.init();
+    }, 20_000);
+
+    afterAll(async () => {
+      await noTransit?.close();
+    });
+
+    it('still answers, says which source is missing, and sends no transit facts', async () => {
+      const res = await request(noTransit.getHttpServer())
+        .post('/debug/personalization')
+        .send({ userId: 'user_101', question: 'Should I change my job this year?' })
+        .expect(200);
+      expect(res.body.explain.upstream.transit.outcome).toBe('failed');
+      const ids = res.body.explain.selected.map((i: { id: string }) => i.id);
+      // Not `includes('transit')`: "derived.dasha.transition" would match.
+      expect(ids.some((id: string) => /^(derived\.)?transit\./.test(id))).toBe(false);
+      // The natal chart and the dasha still carry the answer.
+      expect(ids).toContain('derived.house.10');
+      expect(ids).toContain('derived.dasha.position');
+      const completeness = res.body.explain.projectedConfidence.factors.find(
+        (f: { name: string }) => f.name === 'dataCompleteness',
+      );
+      expect(completeness.note).toContain('transit:failed');
+      expect(completeness.value).toBe(0.9);
     });
   });
 

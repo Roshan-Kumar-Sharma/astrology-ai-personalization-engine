@@ -131,7 +131,7 @@ questions ("why did I get this answer?") can be served with zero generation.
 | Upstream slow | Per-source timeout 1200ms | Abort, degrade, log |
 | Upstream down | Circuit breaker after 5 failures | Skip the call, serve stale, protect latency budget |
 | Upstream returns bad data | Chart validation against classical rules | Log inconsistency, cap confidence at 0.60 |
-| Retry storm | — | Full-jitter backoff; every request fans out to four services at once |
+| Retry storm | — | Full-jitter backoff; every request fans out to five services at once |
 | LLM down / rate-limited | Exception or 200-with-error body | Offline provider, `degraded`, confidence downgraded |
 | LLM hallucinates | Groundedness verification | Flag, lower confidence, report honest `sourcesUsed` |
 | LLM ignores output contract | `contractIgnored` flag | Fall back to raw text, penalise confidence 0.35 |

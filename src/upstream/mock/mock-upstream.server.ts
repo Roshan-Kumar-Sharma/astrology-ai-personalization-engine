@@ -1,11 +1,11 @@
 import { createServer, IncomingMessage, Server, ServerResponse } from 'node:http';
 import { AppConfig } from '../../common/config/app.config';
 import { StructuredLogger } from '../../common/logging/logger';
-import { HOROSCOPES, KUNDLIS, panchangFor, USERS } from './fixtures';
+import { HOROSCOPES, KUNDLIS, panchangFor, transitsFor, USERS } from './fixtures';
 
 /**
- * A stand-in for the four MyNaksh backend services, served over real HTTP on a
- * separate port.
+ * A stand-in for the MyNaksh backend services - the four in the brief plus a
+ * transit (gochar) service - served over real HTTP on a separate port.
  *
  * Deliberately NOT an in-process stub. Running these over the loopback interface
  * means the concurrency, timeout, retry, abort and partial-failure code in the
@@ -74,6 +74,13 @@ async function handle(
     // endpoint has no location parameter - a limitation we surface in the README.
     const date = url.searchParams.get('date') ?? today();
     return json(res, 200, panchangFor(date));
+  }
+
+  if (path === '/transits') {
+    // Geocentric sidereal positions are the same everywhere on Earth, so unlike
+    // the panchang this endpoint genuinely needs no location.
+    const date = url.searchParams.get('date') ?? today();
+    return json(res, 200, transitsFor(date));
   }
 
   if (path === '/health') return json(res, 200, { status: 'ok' });

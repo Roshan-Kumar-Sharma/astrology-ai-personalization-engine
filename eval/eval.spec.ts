@@ -3,7 +3,7 @@ import { runAll } from './score';
 /**
  * The golden eval as a regression gate.
  *
- * BASELINE is what the engine measured on 2026-09-21, not what it should score.
+ * BASELINE is what the engine measured on 2026-09-22, not what it should score.
  * Several numbers here are poor; they are pinned anyway, because the point of a
  * baseline is to make the next change's effect visible, not to look good. The
  * assertions are one-sided - improvements pass, regressions fail - so raising a
@@ -12,18 +12,22 @@ import { runAll } from './score';
  * Runs in CI: no LLM, no network, ~200 cases in well under a second.
  */
 const BASELINE = {
-  intentAccuracy: 0.7333,
-  horizonAccuracy: 0.875,
+  intentAccuracy: 0.7419,
+  horizonAccuracy: 0.879,
   secondaryRecall: 0.0769,
   blockRecall: 1.0,
   falsePositiveRate: 0.0,
   policyAccuracy: 1.0,
   constraintRecall: 1.0,
   injectionAccuracy: 1.0,
-  selectionPassRate: 0.8846,
-  includeRecall: 0.9556,
-  excludeAccuracy: 0.9565,
-  reasonAccuracy: 0.9,
+  // 2026-09-22, transits: 26 -> 34 cases. Pass rate 0.8846 -> 0.9412 and reason
+  // accuracy 0.9 -> 1.0 - the latter because giving the `general` intent a
+  // lifetime override made "Will I ever get promoted?" drop the panchang by
+  // rule, which sel-19 had been (correctly) failing on since it was written.
+  selectionPassRate: 0.9412,
+  includeRecall: 0.9643,
+  excludeAccuracy: 0.9667,
+  reasonAccuracy: 1.0,
 };
 
 /** Floating-point slack, so a rounding wobble is not a build failure. */
@@ -38,9 +42,9 @@ describe('golden eval', () => {
     expect(actual).toBeLessThanOrEqual(ceiling + EPS);
 
   it('has the expected dataset size', () => {
-    expect(r.intent.total).toBe(120);
+    expect(r.intent.total).toBe(124);
     expect(r.safety.total).toBe(103);
-    expect(r.selection.total).toBe(26);
+    expect(r.selection.total).toBe(34);
   });
 
   it('does not regress on intent classification', () => {

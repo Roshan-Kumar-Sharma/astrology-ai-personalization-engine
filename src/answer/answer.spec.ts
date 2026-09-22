@@ -190,6 +190,7 @@ describe('ConfidenceService', () => {
     kundli: ok('kundli', {} as any),
     horoscope: ok('horoscope', {} as any),
     panchang: ok('panchang', {} as any),
+    transit: ok('transit', {} as any),
   });
 
   const plan = (overrides: Partial<PersonalizationPlan> = {}): PersonalizationPlan => ({
@@ -198,6 +199,7 @@ describe('ConfidenceService', () => {
     intentMethod: 'lexicon',
     secondaryIntents: [],
     horizon: 'quarter',
+    focus: [],
     style: {
       languageCode: 'en',
       tier: 'premium',

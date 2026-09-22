@@ -11,7 +11,7 @@ POST /personalize
 
 ## The shape of it
 
-Your client talks only to this service. It never sees the four upstream
+Your client talks only to this service. It never sees the five upstream
 services — the engine fans out to them on the caller's behalf.
 
 ```
@@ -91,7 +91,7 @@ if (guardrail.blocked) return { answer: guardrail.blockResponse, confidence: 'HI
 ```
 
 **Why first?** A question we are going to refuse should not:
-- leak the user's identifier to four backend services,
+- leak the user's identifier to five backend services,
 - cost an LLM call,
 - or spend 10 seconds doing it.
 
@@ -111,7 +111,7 @@ constraints attached.
 
 `src/upstream/context-aggregator.service.ts` · **54 ms**
 
-All four services are called **at once**:
+All five services are called **at once**:
 
 ```
 GET :4010/users/user_101      → {"id":"user_101","language":"en","subscription":"premium",…}

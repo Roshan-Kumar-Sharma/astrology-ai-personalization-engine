@@ -266,6 +266,52 @@ to a specific user's running dasha.
 
 ---
 
+## `gochar.ts` — transits
+
+Pure functions again, in the shape of `vimshottari.ts`. The whole file counts
+signs from the natal Moon and reads a degree within a sign as "how far
+through".
+
+### `signsFrom()` and `signProgress()`
+
+```ts
+export function signsFrom(from, to) { return ((b - a + 12) % 12) + 1; }   // inclusive: the sign itself is 1
+
+export function signProgress(planet, degree) {
+  const retrogradeNode = planet === 'Rahu' || planet === 'Ketu';
+  const fraction = retrogradeNode ? (30 - d) / 30 : d / 30;
+  return { pct, monthsRemaining: (1 - fraction) * MONTHS_PER_SIGN[planet] };
+}
+```
+
+`MONTHS_PER_SIGN` is each orbital period over twelve: Saturn 29.457 y → 29.5
+months, Jupiter 11.862 y → 11.9, the nodes 18.613 y → 18.6. The `retrogradeNode`
+branch is the one line most likely to be wrong in a gochar implementation: Rahu
+enters a sign at 30° and *leaves* at 0°, so Rahu at 4° is nearly out, not nearly
+in. Its test says exactly that.
+
+### `saturnFromMoon()` — Sade Sati
+
+```ts
+const SADE_SATI_PHASE = { 12: 'rising', 1: 'peak', 2: 'setting' };
+if (phase) {
+  const elapsedDeg = SADE_SATI_PHASE_INDEX[phase] * 30 + degree;   // 0..90
+  cycle = { pct: elapsedDeg / 90, monthsRemaining: (1 - pct) * 3 * MONTHS_PER_SIGN.Saturn };
+}
+if (fromMoon === 4) kind = 'dhaiya', dhaiyaName = 'Kantaka Shani';
+if (fromMoon === 8) kind = 'dhaiya', dhaiyaName = 'Ashtama Shani';
+favourable = [3, 6, 11].includes(fromMoon);
+```
+
+Worked: Moon in Aquarius, Saturn at 7° Pisces → `fromMoon = 2` → setting
+phase; `elapsedDeg = 2 × 30 + 7 = 67` → 74.4% of the cycle; `(1 − 0.744) × 88.5
+= 22.6` months left. The unit test pins those exact numbers.
+
+`jupiterFromMoon()` (supportive in 2/5/7/9/11, plus dignity) and
+`nodesFromMoon()` (Ketu always `rahu + 6`) follow the same pattern.
+
+---
+
 ## `chart-validation.ts`
 
 ### `assessChart()`
@@ -427,6 +473,31 @@ lord, a generic day becomes personally charged.
 Observed live: today's nakshatra Chitra is ruled by Mars, which is user_101's
 running antardasha lord — so `derived.panchang.resonance` fired instead of the
 generic `derived.panchang.lord`.
+
+### `transitFromMoonFacts()` and `transitOverHouseFacts()`
+
+Two methods, deliberately separate, because they have different reliability:
+
+```ts
+if (transits) {
+  facts.push(...this.transitFromMoonFacts(kundli, transits));
+  if (reliability.housesUsable) facts.push(...this.transitOverHouseFacts(kundli, transits));
+}
+```
+
+The Moon-relative facts (`derived.transit.sade_sati` | `dhaiya` | `saturn`,
+`derived.transit.jupiter`, `derived.transit.nodes`) need only `kundli.moonSign`
+and survive an unknown birth time. The house-relative ones
+(`derived.transit.saturn.house.6`, `derived.transit.jupiter.house.10`) need the
+lagna and follow the same rule as every other house statement: not built at all
+when houses are unsound. The selector's reliability gate would catch them by id
+anyway — `/\.house\.\d+$/` matches — and a test proves it; not building them is
+the belt to that brace.
+
+Exactly one Saturn fact is emitted per chart, whichever of the three applies.
+Every statement ends *"a climate, not a verdict"*, and every one is terse on
+purpose: the first draft cost 197 tokens across three facts and pushed the
+career horoscope out of a free-tier answer. The golden eval caught it.
 
 ### `DerivedFact` and provenance
 

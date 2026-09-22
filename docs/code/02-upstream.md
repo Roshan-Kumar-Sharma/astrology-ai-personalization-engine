@@ -1,6 +1,6 @@
 # 2. Upstream — `src/upstream/`
 
-Everything about talking to the four backend services. Read `types.ts` first —
+Everything about talking to the five backend services — the four in the brief plus the transit service. Read `types.ts` first —
 it defines the vocabulary the rest of the codebase uses.
 
 ---
@@ -120,6 +120,7 @@ export function cacheTtlFor(source: UpstreamName, now = new Date()): CacheTtl {
     case 'horoscope': return { freshMs: msUntilIstHour(0, now), staleMs: 12 * 60 * 60_000 };
     case 'panchang':  return { freshMs: msUntilIstHour(6, now), staleMs: 12 * 60 * 60_000 };
     case 'user':      return { freshMs: 60_000, staleMs: 10 * 60_000 };
+    case 'transit':   return { freshMs: msUntilIstHour(0, now), staleMs: 7 * 24 * 60 * 60_000 };
   }
 }
 ```
@@ -135,21 +136,29 @@ Each number comes from what the data **is**:
   midnight to midnight. This is a genuine domain detail, not an arbitrary choice.
 - **user 60s** — mutable at any moment; someone switching to Hindi expects the
   next answer in Hindi.
+- **transit until IST midnight, stale for a week** — the slow movers barely
+  move: Saturn ~0.03° a day, Jupiter ~0.08°, the nodes ~0.05°. A position a
+  week old is wrong by well under a degree, and only a sign ingress inside that
+  week could change a conclusion.
 
-Note the switch has no `default`. With a typed union, TypeScript verifies all four
-cases are handled — adding a fifth service fails to compile until handled here.
+Note the switch has no `default`. With a typed union, TypeScript verifies every
+case is handled — and that is not hypothetical: adding the transit service on
+2026-09-22 failed to compile at exactly this switch until the case was written.
 
 ### `SOURCE_CRITICALITY`
 
 ```ts
 export const SOURCE_CRITICALITY: Record<UpstreamName, number> = {
-  user: 0.15, kundli: 0.45, horoscope: 0.3, panchang: 0.1,
+  user: 0.15, kundli: 0.4, horoscope: 0.25, panchang: 0.1, transit: 0.1,
 };
 ```
 
-Sums to 1.0. Used by the confidence calculator: losing the kundli costs 0.45 of
-the completeness factor; losing the panchang costs 0.10. Losing the user profile
-is survivable because every style axis has a default.
+Sums to 1.0. Used by the confidence calculator: losing the kundli costs 0.40 of
+the completeness factor; losing the panchang or the transits costs 0.10 each.
+Losing the user profile is survivable because every style axis has a default.
+When the transit service was added, kundli and horoscope each gave up a little
+to make room — transits colour an answer rather than carry it, so losing them
+costs about what losing the panchang does.
 
 ---
 
@@ -402,3 +411,30 @@ export function panchangFor(dateIso: string) {
 Real names, deterministic, always current-looking — but it does **not** compute
 planetary longitudes. The comment says so, because quietly implying real
 astronomical calculation would be dishonest.
+
+### The transits move, honestly labelled too
+
+```ts
+const TRANSIT_EPOCH_MS = Date.parse('2026-09-15T00:00:00Z');
+const TRANSIT_MODEL = {
+  Saturn:  { lon: 330 + 7,  perDay:  0.03347 },  // 360 / (29.457 y × 365.25 d)
+  Jupiter: { lon: 90 + 10,  perDay:  0.08309 },
+  Rahu:    { lon: 300 + 4,  perDay: -0.05295 },  // the nodes move backwards
+};
+
+export function transitsFor(dateIso: string): Transits {
+  const days = (Date.parse(`${dateIso}T00:00:00Z`) - TRANSIT_EPOCH_MS) / 86_400_000;
+  // lon = epoch + perDay × days, mod 360; sign = floor(lon / 30), degree = lon % 30
+  // Ketu = Rahu + 180°
+}
+```
+
+Positions are propagated from a reference epoch by **mean** daily motion. That
+ignores retrograde loops entirely — real Saturn spends about a third of every
+year moving backwards; this one never does. What it preserves is the thing the
+engine actually reasons about (which sign, roughly how far through), and it
+lets the sky *move*: ask for `?date=2028-09-15` and Saturn has left Pisces,
+which is how the "watch Sade Sati end" experiment in docs/11 works.
+
+The route is `GET /transits`. Unlike the panchang it genuinely needs no
+location: geocentric sidereal positions are the same everywhere on Earth.

@@ -813,7 +813,7 @@
           ]),
         )));
 
-        return panel('Upstream & latency', 'The four upstream calls run concurrently, so the stage times overlap.', [
+        return panel('Upstream & latency', 'The upstream calls run concurrently, so the stage times overlap.', [
           el('div', { class: 'two' }, [upstream, waterfall]),
           el('p', { class: 'hint', text: 'Chart reliability: birth time ' + e.chartReliability.birthTime +
             ' · houses ' + (e.chartReliability.housesUsable ? 'usable' : 'suppressed') +

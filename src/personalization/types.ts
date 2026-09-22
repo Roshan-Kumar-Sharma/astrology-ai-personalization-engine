@@ -1,4 +1,5 @@
 import { DomainCategory, FactConfidence, ChartReliability } from '../astrology/types';
+import { Planet } from '../astrology/zodiac';
 import { UpstreamName } from '../upstream/types';
 
 export type Intent =
@@ -108,6 +109,8 @@ export interface PersonalizationPlan {
   intentMethod: IntentResult['method'];
   secondaryIntents: Intent[];
   horizon: Horizon;
+  /** Planets the question names outright; their transit facts are promoted. */
+  focus: Planet[];
   style: ResponseStyle;
   selected: ScoredItem[];
   excluded: ExcludedItem[];
@@ -116,7 +119,7 @@ export interface PersonalizationPlan {
   /** Tokens the full candidate set would have cost, had all of it been sent. */
   tokensAvailable: number;
   /**
-   * Tokens a naive implementation would spend by dumping the four raw upstream
+   * Tokens a naive implementation would spend by dumping the five raw upstream
    * JSON payloads into the prompt. This is the honest baseline: it is what the
    * obvious implementation actually does, whereas `tokensAvailable` measures
    * only the reduction within our own candidate set.

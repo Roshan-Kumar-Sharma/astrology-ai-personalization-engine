@@ -356,7 +356,7 @@ throw lastErr;
 Then `random() * ceiling` picks a value **anywhere in `[0, ceiling]`**. This is
 "full jitter", not "backoff plus a bit of noise".
 
-**Why it matters here specifically:** every request fans out to four services
+**Why it matters here specifically:** every request fans out to five services
 simultaneously. Without jitter, a blip makes every caller retry at exactly
 60ms, then exactly 120ms — synchronised waves that re-hammer a service trying to
 recover. Full jitter spreads them evenly.

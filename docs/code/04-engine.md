@@ -286,9 +286,38 @@ sequences match consistently.
 
 ---
 
+## `intent/focus.extractor.ts`
+
+The third signal read from the question text, after intent and horizon: the
+planet(s) it **names**.
+
+```ts
+const PLANET_RULES = [
+  { planet: 'Saturn',  patterns: [/\bsaturn\b/i, /\bshani\b/i, /\bsa+d?h?e\s?sa+t[ih]\b/i, /शनि/, …] },
+  { planet: 'Jupiter', patterns: [/\bjupiter\b/i, /\bbrihaspati\b/i, /\bguru\s+(gochar|transit|grah|dev|…)\b/i, …] },
+  { planet: 'Rahu',    patterns: [/\brahu\b/i, /राहु/] },
+  { planet: 'Ketu',    patterns: [/\bketu\b/i, /केतु/] },
+];
+export function extractFocus(question): { planets: Planet[]; gochar: boolean; signals: string[] }
+```
+
+Why it exists: *"Is Sade Sati affecting me?"* classifies as `general` and has no
+horizon, and on a free-tier budget the one fact that answers it — Saturn's
+position from the Moon — lost a token-count tie-break and was dropped. Neither
+intent nor horizon can see that the question is *about Saturn*. This can.
+
+Two patterns deserve a look. `sa+d?h?e\s?sa+t[ih]` accepts *sade sati*, *saadhe
+saati*, *sadhe sati* and *sadesati* — transliteration is not standardised. And
+bare `guru` is deliberately **not** Jupiter: in this product it is far more
+often the astrologer ("Guru ji, should I…") or a teacher, so only the compound
+forms count. `shanivar` (Saturday) is kept out by the word boundary alone.
+
+It never changes intent. A question that names Saturn is still a career
+question if it is about work.
+
 ## `context-item.builder.ts`
 
-Flattens four nested documents plus derived facts into one flat list.
+Flattens five nested documents plus derived facts into one flat list.
 
 ```ts
 build(bundle: ContextBundle, derived: DerivedFact[]): ContextItem[] {
@@ -425,6 +454,14 @@ private score(item, ctx): ScoredItem {
   if (override?.promote && matchesAny(item.id, override.promote)) score += HORIZON_ADJUSTMENTS.promote;
   if (override?.demote  && matchesAny(item.id, override.demote))  score += HORIZON_ADJUSTMENTS.demote;
 
+  const named = focus.find((p) => matchesAny(item.id, FOCUS_PROMOTE[p] ?? []));
+  if (named) { score += FOCUS_ADJUSTMENT; reasons.push(`promoted: the question names ${named}`); }
+
+  if (tier !== 'primary' && score > TIER_WEIGHTS.primary) {
+    score = TIER_WEIGHTS.primary;               // a promotion lifts TO primary weight, never past it
+    reasons.push('capped at primary weight');
+  }
+
   score *= CONFIDENCE_MULTIPLIER[item.confidence];
   if (item.stale) score *= STALE_PENALTY;
 
@@ -432,9 +469,18 @@ private score(item, ctx): ScoredItem {
 }
 ```
 
-Order matters: additive horizon adjustments first, then multiplicative quality
-penalties. A promoted-but-stale item gets `(15 + 60) × 0.75`, not
-`15 × 0.75 + 60`.
+Order matters: additive horizon and focus adjustments first, then the cap, then
+multiplicative quality penalties. A promoted-but-stale item gets
+`(15 + 60) × 0.75`, not `15 × 0.75 + 60`.
+
+The cap arrived with the transits. Promoting a *secondary* item by +60 made it
+115 — above every primary — so at a "next few months" horizon Saturn's transit
+led the prompt ahead of the dasha transition, which is the actual answer to
+"should I change my job". The facts an intent names as primary are the ones
+that answer the question; a horizon or a named planet may add to them, not
+bury them. Note the arithmetic that survives: `55 − 45 + 60 = 70` for a Saturn
+fact at a `today` horizon when the question names Saturn — demoted, promoted,
+under the cap, and above the floor, with all three reasons in the ledger.
 
 The secondary-intent lift only applies to items still `neutral` — an item already
 primary for the main intent is not affected. And it runs **after** exclusions, so

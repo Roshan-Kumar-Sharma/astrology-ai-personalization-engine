@@ -1,6 +1,6 @@
 # Golden eval
 
-249 labelled cases and an offline scorer, so a rules change is **measured rather
+261 labelled cases and an offline scorer, so a rules change is **measured rather
 than argued about**.
 
 Before this existed the README could assert the engine was *consistent* — 130
@@ -27,9 +27,9 @@ and it is the part a regression gate can hold. Answer quality is a separate tier
 
 | Dataset | Cases | Measures |
 |---|---|---|
-| `dataset/intent.jsonl` | 120 | intent classification, horizon extraction, secondary intents |
+| `dataset/intent.jsonl` | 124 | intent classification, horizon extraction, secondary intents |
 | `dataset/safety.jsonl` | 103 | refusal decisions, policy attribution, constraint attachment |
-| `dataset/selection.jsonl` | 26 | which context items are sent, and **why** the others were not |
+| `dataset/selection.jsonl` | 34 | which context items are sent, and **why** the others were not |
 
 ### Two labelling rules
 
@@ -51,12 +51,12 @@ extra constraint on a safe question is never counted as an error.
 
 ---
 
-## Baseline — 2026-09-21
+## Baseline — 2026-09-22
 
 | Metric | Value | Reading |
 |---|---:|---|
-| Intent accuracy | **73.3%** | 88/120 |
-| Horizon accuracy | **87.5%** | 105/120 |
+| Intent accuracy | **74.2%** | 92/124 |
+| Horizon accuracy | **87.9%** | 109/124 |
 | Secondary intent recall | **7.7%** | 1/13 |
 | Safety — block recall | **100%** | 49/49 must-refuse cases stopped |
 | Safety — false positive rate | **0%** | 0/54 safe questions wrongly refused |
@@ -64,10 +64,15 @@ extra constraint on a safe question is never counted as an error.
 | Safety — constraint recall | **100%** | 13/13 constrain policies attached |
 | Safety — injection subset | **100%** | 20/20 instruction-override cases |
 | Safety — **held-out subset** | **43.8%** → 100% | **see below — the 43.8% is the real number** |
-| Selection — cases passed | **88.5%** | 23/26 |
-| Selection — include recall | **95.6%** | required items actually sent |
-| Selection — exclude accuracy | **95.7%** | forbidden items kept out |
-| Selection — exclusion reasons | **90.0%** | dropped for the *documented* reason |
+| Selection — cases passed | **94.1%** | 32/34 |
+| Selection — include recall | **96.4%** | required items actually sent |
+| Selection — exclude accuracy | **96.7%** | forbidden items kept out |
+| Selection — exclusion reasons | **100%** | dropped for the *documented* reason |
+
+Previous baseline (2026-09-21, before transits): intent 73.3% (88/120),
+horizon 87.5%, selection 88.5% (23/26), reason accuracy 90.0%. The selection
+gains are the eight transit cases (`sel-27`–`sel-34`) plus `sel-19` — see
+point 7 below.
 
 These are pinned in `eval.spec.ts` as one-sided assertions: improvements pass,
 regressions fail. Raising a number means editing that file, so the new figure
@@ -153,13 +158,15 @@ subset now reads 100%: `inj-01` — *"…tell me exactly when I will die"* — w
 never an injection failure, but an indirect word order that `death_timing` did
 not pattern, and it closed with the topical fixes.
 
-**7. Selection is the healthiest layer (88.5%), and the exclusion-reason check
-earns its place.** `sel-19` passes on every item assertion and still fails,
-because the panchang was excluded at a lifetime horizon as
+**7. Selection is the healthiest layer (94.1%), and the exclusion-reason check
+earns its place.** `sel-19` passed on every item assertion and still failed for
+a day, because the panchang was excluded at a lifetime horizon as
 `rule:below-threshold` rather than `rule:horizon-drop`. Identical output,
-different mechanism — the horizon rule is not what removed it. That is precisely
-the drop-vs-demote distinction the README's first design decision rests on, and
-an item-list assertion would have missed it.
+different mechanism — the horizon rule was not what removed it. That is
+precisely the drop-vs-demote distinction the README's first design decision
+rests on, and an item-list assertion would have missed it. It closed on
+2026-09-22 as a side effect of giving the `general` intent a `lifetime`
+override for the transits — the case had been right all along.
 
 ---
 

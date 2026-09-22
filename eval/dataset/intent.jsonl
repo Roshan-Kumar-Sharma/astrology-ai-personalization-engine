@@ -118,3 +118,7 @@
 {"id":"amb-08","question":"Should I?","intent":"general","horizon":"unspecified","tags":["ambiguous"]}
 {"id":"amb-09","question":"Kal ka kya scene hai?","intent":"general","horizon":"today","lang":"hinglish","tags":["ambiguous"],"note":"'kal' is ambiguous between yesterday and tomorrow in Hindi"}
 {"id":"amb-10","question":"Things have been strange lately","intent":"general","horizon":"unspecified","tags":["ambiguous"]}
+{"id":"tr-01","question":"Is my Sade Sati over?","intent":"general","horizon":"unspecified","tags":["transit"],"note":"names a transit but no life area: general is the honest label, and selection (not intent) is what must carry the Sade Sati fact"}
+{"id":"tr-02","question":"How will Sade Sati affect my career this year?","intent":"career","horizon":"year","tags":["transit"],"note":"naming Saturn does not change the intent; the question is still about work"}
+{"id":"tr-03","question":"Shani ki sade sati mein shaadi karni chahiye?","intent":"relationship","horizon":"unspecified","lang":"hinglish","tags":["transit"]}
+{"id":"tr-04","question":"Jupiter transit is good for money this year?","intent":"finance","horizon":"year","tags":["transit"]}

@@ -21,10 +21,21 @@ import { PersonalizationService } from '../src/personalization/personalization.s
 import { StyleResolver } from '../src/personalization/style.resolver';
 import type { PersonalizationPlan } from '../src/personalization/types';
 import { GuardrailsService } from '../src/safety/guardrails.service';
-import { HOROSCOPES, KUNDLIS, USERS, panchangFor } from '../src/upstream/mock/fixtures';
+import {
+  HOROSCOPES,
+  KUNDLIS,
+  USERS,
+  panchangFor,
+  transitsFor,
+} from '../src/upstream/mock/fixtures';
 import type { ContextBundle, SourceResult, UpstreamName } from '../src/upstream/types';
 
-/** A fixed date keeps panchang-dependent selection reproducible across runs. */
+/**
+ * A fixed date keeps panchang- and transit-dependent selection reproducible
+ * across runs. It is also the transit model's epoch, so the sky here is the
+ * one the fixtures were written against: Saturn in early Pisces, Jupiter in
+ * early Cancer, Rahu in late Aquarius.
+ */
 export const EVAL_DATE = '2026-09-15';
 
 const CFG: AppConfig = loadConfig({ ...process.env, LLM_PROVIDER: 'mock', LOG_LEVEL: 'error' });
@@ -40,7 +51,7 @@ function ok<T>(source: UpstreamName, data: T): SourceResult<T> {
  * "ok" here isolates the variable under test, so a selection miss is a rules
  * problem rather than an availability artefact.
  */
-export function bundleFor(userId: string): ContextBundle {
+export function bundleFor(userId: string, date = EVAL_DATE): ContextBundle {
   const user = USERS[userId];
   if (!user) throw new Error(`eval: unknown fixture user "${userId}"`);
   return {
@@ -48,6 +59,7 @@ export function bundleFor(userId: string): ContextBundle {
     kundli: ok('kundli', KUNDLIS[userId]),
     horoscope: ok('horoscope', HOROSCOPES[userId]),
     panchang: ok('panchang', panchangFor(EVAL_DATE)),
+    transit: ok('transit', transitsFor(date)),
   };
 }
 

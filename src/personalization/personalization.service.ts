@@ -7,6 +7,7 @@ import { ContextBundle } from '../upstream/types';
 import { INTENT_RULES } from './config/intent-rules.config';
 import { ContextItemBuilder } from './context-item.builder';
 import { ContextSelector } from './context.selector';
+import { extractFocus } from './intent/focus.extractor';
 import { extractHorizon } from './intent/horizon.extractor';
 import { IntentClassifier } from './intent/intent.classifier';
 import { StyleResolver } from './style.resolver';
@@ -14,15 +15,16 @@ import { PersonalizationPlan, IntentResult } from './types';
 import { estimateJsonTokens } from '../llm/tokenizer';
 
 /**
- * What a "just send everything" implementation would put in the prompt: the
- * four upstream documents, serialised as-is.
+ * What a "just send everything" implementation would put in the prompt: every
+ * upstream document, serialised as-is.
  */
 function naiveBaseline(bundle: ContextBundle): number {
   return (
     estimateJsonTokens(bundle.user.data ?? {}) +
     estimateJsonTokens(bundle.kundli.data ?? {}) +
     estimateJsonTokens(bundle.horoscope.data ?? {}) +
-    estimateJsonTokens(bundle.panchang.data ?? {})
+    estimateJsonTokens(bundle.panchang.data ?? {}) +
+    estimateJsonTokens(bundle.transit.data ?? {})
   );
 }
 
@@ -80,6 +82,13 @@ export class PersonalizationService {
         ? `Time horizon "${horizon}" from the phrase "${signal}".`
         : 'No explicit time frame in the question; treating it as near-term.',
     );
+    const focus = trace.timeSync('intent.focus', () => extractFocus(question));
+    if (focus.planets.length || focus.gochar) {
+      trace.note(
+        `Question names ${focus.planets.length ? focus.planets.join(', ') : 'the transits'} ` +
+          `(from: ${focus.signals.join(', ')}); those transit facts are promoted.`,
+      );
+    }
 
     const rule = INTENT_RULES[intentResult.intent];
 
@@ -92,6 +101,7 @@ export class PersonalizationService {
         user: bundle.user.data,
         kundli: bundle.kundli.data,
         panchang: bundle.panchang.data,
+        transits: bundle.transit.data,
         categories: rule.categories,
       }),
     );
@@ -122,6 +132,8 @@ export class PersonalizationService {
         horizon,
         tokenBudget,
         reliability,
+        focus: focus.planets,
+        gochar: focus.gochar,
       }),
     );
 
@@ -133,6 +145,7 @@ export class PersonalizationService {
       intentMethod: intentResult.method,
       secondaryIntents: intentResult.secondary,
       horizon,
+      focus: focus.planets,
       style,
       selected: selection.selected,
       excluded: selection.excluded,

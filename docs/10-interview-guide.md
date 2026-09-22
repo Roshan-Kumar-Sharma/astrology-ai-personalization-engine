@@ -86,23 +86,24 @@ Pick the dasha insight. It is concrete, domain-specific, and impossible to fake.
 
 ### "How would you add a fifth upstream service — say, transits?"
 
-Answer concretely; this tests whether extensibility is real.
+This one is no longer hypothetical: transits **were** the fifth service, added
+on 2026-09-22. Answer from what actually happened, because the prediction and
+the reality differ in an instructive way.
 
-> "Four things, none of which touch the pipeline:
-> 1. A type in `upstream/types.ts` and a URL in config.
-> 2. One line in `ContextAggregator` — the resilience stack is already generic,
->    so it inherits retry, timeout, circuit breaking and caching for free.
-> 3. A cache TTL in `cache-policy.ts` — for transits, roughly daily.
-> 4. Mapping to `ContextItem`s in the builder, and adding the ids to the relevant
->    rules.
+> "The prediction was 'four things, none of which touch the pipeline', and that
+> held: a type and a URL, one `track()` line in the aggregator — which inherited
+> retry, timeout, circuit breaking and caching for free — a TTL, and the items
+> plus their rule ids. TypeScript found every seam that enumerates sources; the
+> TTL switch wouldn't compile until the new case was written.
 >
-> The one genuinely new piece would be derived facts — Saturn transiting the 10th
-> house, or Sade Sati detection. That's domain code in `astrology/`.
->
-> Transits are actually the biggest missing signal in the whole project. Saturn
-> crossing the 10th is *the* classic career-change trigger, and Sade Sati is the
-> most-asked question in Indian astrology. I couldn't build it because there's no
-> transit service in the brief."
+> What the prediction missed was everything *after* wiring. The derived facts
+> were the real work, and the golden eval failed on the first run — correctly.
+> Promoting `derived.transit.*` by wildcard admitted 'Jupiter over the 4th house'
+> into a career answer; the three statements cost 62% of a free-tier budget; and
+> 'Is Sade Sati affecting me?' dropped the one fact that answers it to a token
+> tie-break, which needed a third question-text signal — the planet a question
+> names. Adding the source was an afternoon. Making the engine *reason* with it
+> well was the feature."
 
 ### "Walk me through what happens when the Kundli service goes down."
 

@@ -19,7 +19,7 @@ class HttpStatusError extends Error {
 }
 
 /**
- * Single generic HTTP client used for all four upstreams.
+ * Single generic HTTP client used for all five upstreams.
  *
  * Retry / timeout / caching / circuit-breaking are cross-cutting concerns, so
  * they live here once rather than being reimplemented per service. Adding a

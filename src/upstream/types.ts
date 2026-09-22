@@ -52,7 +52,28 @@ export interface Panchang {
   karana: string;
 }
 
-export type UpstreamName = 'user' | 'kundli' | 'horoscope' | 'panchang';
+/**
+ * Current sidereal positions of the slow-moving planets - the ones whose sign
+ * changes are rare enough to characterise a season rather than a day.
+ *
+ * Only these four are carried. The Sun, Moon, Mercury, Venus and Mars change
+ * sign within days or weeks; that rhythm belongs to the panchang, which already
+ * carries the Moon's position as the nakshatra. Saturn, Jupiter and the nodes
+ * are the transits classical gochar actually reads.
+ */
+export interface Transits {
+  date: string;
+  positions: Record<'Saturn' | 'Jupiter' | 'Rahu' | 'Ketu', TransitPositionDto>;
+}
+
+export interface TransitPositionDto {
+  sign: string;
+  /** Sidereal degree within the sign, 0-30. */
+  degree: number;
+  retrograde?: boolean;
+}
+
+export type UpstreamName = 'user' | 'kundli' | 'horoscope' | 'panchang' | 'transit';
 
 export type FetchOutcome = 'ok' | 'cached' | 'stale' | 'failed' | 'skipped';
 
@@ -74,8 +95,9 @@ export interface ContextBundle {
   kundli: SourceResult<Kundli>;
   horoscope: SourceResult<Horoscope>;
   panchang: SourceResult<Panchang>;
+  transit: SourceResult<Transits>;
 }
 
 export function bundleResults(b: ContextBundle): SourceResult<unknown>[] {
-  return [b.user, b.kundli, b.horoscope, b.panchang];
+  return [b.user, b.kundli, b.horoscope, b.panchang, b.transit];
 }

@@ -2,7 +2,7 @@
 
 The intelligence layer between MyNaksh's structured astrology services and an LLM.
 
-It takes a user id and a free-text question, gathers context from four backend
+It takes a user id and a free-text question, gathers context from five backend
 services concurrently, works out what is actually being asked, computes what the
 chart *means* before any model sees it, selects only the context that question
 deserves, and returns a grounded answer with a confidence label and a verified
@@ -96,19 +96,23 @@ day. Over "the next few months" the panchang is not merely less useful, it is
 cannot speak to a quarter. Meanwhile the dasha — a multi-year planetary period —
 is the reverse.
 
-So selection keys on `(intent × horizon)`. Same question, four windows:
+So selection keys on `(intent × horizon)`. Same question, four windows (from
+the engine, `user_101`):
 
-| Question ends with…      | horizon   | Panchang sent? | Top-ranked context                             |
-| ------------------------ | --------- | -------------- | ---------------------------------------------- |
-| `today?`                 | `today`   | **yes**        | Career Horoscope, 10th House, Panchang, Dasha   |
-| `this week?`             | `week`    | no             | Career Horoscope, 10th House, Dasha             |
-| `in the next few months?`| `quarter` | no             | Career Horoscope, 10th House, Dasha, Transition |
-| `this year?`             | `year`    | no             | 10th House, Dasha, Transition (horoscope demoted) |
+| Question ends with…      | horizon   | Panchang? | Transits? | Top-ranked context                                          |
+| ------------------------ | --------- | --------- | --------- | ----------------------------------------------------------- |
+| `today?`                 | `today`   | **yes**   | no        | Career Horoscope, 10th House, Dasha Rulership, Dasha, Nakshatra Lord |
+| `this week?`             | `week`    | no        | yes       | Career Horoscope, 10th House, Dasha Rulership, Dasha, Transition |
+| `in the next few months?`| `quarter` | no        | **promoted** | Career Horoscope, 10th House, Dasha Rulership, Saturn Transit, Dasha |
+| `this year?`             | `year`    | no        | **promoted** | 10th House, Dasha Rulership, Saturn Transit, Dasha, Jupiter Transit (horoscope demoted) |
 
 Panchang is *dropped* at long horizons; the daily horoscope is only *demoted*.
 That distinction is deliberate: the panchang is a point-in-time almanac with no
 persistence, while the horoscope is chart-derived and often echoes the running
-dasha, so it retains weak signal rather than none.
+dasha, so it retains weak signal rather than none. And the slow transits —
+Saturn, Jupiter, the nodes — move the *opposite* way: demoted at `today`,
+promoted at `quarter` and `year`. What the almanac loses as the window widens,
+the gochar gains.
 
 ### 2. Derive conclusions before the model sees anything
 
@@ -435,7 +439,7 @@ Adding Gemini is a new class plus one `case`.
 
 ### Everything is a `ContextItem`
 
-Upstream data arrives as four nested documents, but selection has to happen at
+Upstream data arrives as five nested documents, but selection has to happen at
 the granularity of **one fact** — the 10th house is relevant to a career
 question while the 7th house in the same document is not. Keeping documents
 whole forces an all-or-nothing choice, which is the single biggest source of
@@ -519,24 +523,28 @@ Measured across the brief's six sample questions for `user_101` (`npm run demo`)
 
 ```
 question                                    intent          sent  cand.  rawJSON
-Should I consider changing my job…          career           330    606      230
-How does this month look for my relat…      relationship     289    609      230
-What should I focus on for my health?       health           223    591      230
-What should I prioritize this week?         daily            223    576      230
-Can you summarize today's guidance?         daily            223    576      230
-Is this a good time to invest my savings?   finance          253    606      230
-TOTAL                                                       1541   3564     1380
+Should I consider changing my job…          career           552    831      279
+How does this month look for my relat…      relationship     388    834      279
+What should I focus on for my health?       health           353    816      279
+What should I prioritize this week?         daily            182    801      279
+Can you summarize today's guidance?         daily            182    801      279
+Is this a good time to invest my savings?   finance          400    831      279
+TOTAL                                                       2057   4914     1674
 ```
 
-Selection removes **57% of the candidate set**, and excluded items are absent
-from the prompt entirely rather than ranked lower.
+Selection removes **58% of the candidate set**, and excluded items are absent
+from the prompt entirely rather than ranked lower. (Measured 2026-09-22, with
+the transit service; the daily rows move with the panchang, which cycles by
+date. Before transits the totals were 1541 / 3564 / 1380.)
 
-**But total prompt size is comparable to a raw JSON dump — 1541 vs 1380 tokens.**
-This engine does not win by sending fewer tokens. It wins by sending *different*
-ones: the budget goes on derived conclusions the raw payload does not contain
-(where the user stands in an 18-year dasha, which houses the sub-period lord
-governs) instead of on fields irrelevant to the question. Volume traded for
-grounding, deliberately.
+**But total prompt size is larger than a raw JSON dump — 2057 vs 1674 tokens,
+about 23% more.** This engine does not win by sending fewer tokens. It wins by
+sending *different* ones: the budget goes on derived conclusions the raw payload
+does not contain (where the user stands in an 18-year dasha, which houses the
+sub-period lord governs, which phase of Sade Sati is running) instead of on
+fields irrelevant to the question. Volume traded for grounding, deliberately —
+and the transits widened that gap from 12% to 23%, which is stated here rather
+than hidden.
 
 I would rather report that accurately than quote a 60% saving that only holds
 against a strawman.
@@ -736,7 +744,7 @@ Constrained policies were verified against a live model, not just asserted:
 
 ## Resilience
 
-All four upstreams are fetched **concurrently**; wall time is `max(sources)`, not
+All five upstreams are fetched **concurrently**; wall time is `max(sources)`, not
 `sum(sources)`. Both numbers are logged so the win is visible.
 
 `UpstreamClient.fetch` **never throws** — a failed source is a *result*, not an
@@ -751,7 +759,7 @@ failure has to be a first-class value that flows into confidence scoring.
 | Partial failure | Per-source outcome (`ok` / `cached` / `stale` / `failed`) feeds confidence     |
 | LLM failure     | Falls back to the offline provider, flags `degraded`, downgrades confidence   |
 
-Full jitter matters specifically here: every request fans out to four upstreams
+Full jitter matters specifically here: every request fans out to five upstreams
 at once, so without it a blip causes all callers to retry in lockstep and
 stampede the recovering service.
 
@@ -806,7 +814,7 @@ Also emitted: `upstream.retry`, `upstream.failed`, `safety.blocked`,
 
 ## Testing
 
-**250 tests.** The e2e suite runs over real HTTP against the mock upstream on its
+**284 tests.** The e2e suite runs over real HTTP against the mock upstream on its
 own port — deliberately not stubbed at the service boundary, since the
 concurrency, retry, timeout and partial-failure paths only mean something if a
 socket is involved.
@@ -814,6 +822,8 @@ socket is involved.
 | Suite                       | Covers                                                            |
 | --------------------------- | ----------------------------------------------------------------- |
 | `vimshottari.spec.ts`       | Dasha arithmetic, the Rahu–Mars final-sub-period property          |
+| `gochar.spec.ts`            | Sade Sati phases and cycle arithmetic, the backwards-moving nodes  |
+| `focus.extractor.spec.ts`   | The planet a question names, in three scripts, **and its false positives** |
 | `chart-validation.spec.ts`  | Lagna/house-lord consistency, birth-time reliability heuristics    |
 | `intent.spec.ts`            | All sample questions, Hinglish/Devanagari, horizon extraction      |
 | `context.selector.spec.ts`  | Exclusions, horizon drops, supersession, budget, reliability gate  |
@@ -839,11 +849,14 @@ they are the kind that ship silently:
 
 ## Assumptions
 
-1. **The four services exist and are mocked faithfully.** The bundled mock serves
-   the brief's exact payload shapes over real HTTP. Panchang values are generated
-   deterministically from the date — this is a **stand-in, not an ephemeris
-   calculation**; a production Panchang service computes them from planetary
-   longitudes and local sunrise.
+1. **The four services exist and are mocked faithfully — plus a fifth.** The
+   bundled mock serves the brief's exact payload shapes over real HTTP, and adds
+   a `GET /transits` service the brief did not have, because transits are not
+   derivable from the other four. Panchang values are generated deterministically
+   from the date and transit positions are propagated by mean motion from a
+   reference epoch — both are **stand-ins, not ephemeris calculations**; a
+   production service computes them from planetary longitudes (and, for the
+   panchang, local sunrise).
 2. **`GET /panchang` takes no location.** Real panchang is sunrise-dependent and
    therefore location-specific. I treated the given contract as authoritative and
    flagged the limitation rather than inventing a parameter — see
@@ -954,11 +967,22 @@ per-instance and reset on deploy — see below.
    where the model committed to a topic anyway. **The lexicon under-triggers;
    the LLM over-triggers.** That is the argument for the cascade and for keeping
    the gate tight.
-3. **Transits (gochar).** The single biggest missing astrological signal. Saturn
-   crossing the 10th house is the classic career-change trigger, and Sade Sati
-   (Saturn transiting the 12th/1st/2nd from the Moon) is the question Indian
-   users ask most. Not derivable from the four given services — it needs a
-   transit service.
+3. ~~**Transits (gochar).**~~ **Built** — a fifth upstream (`transit`), pure
+   arithmetic in `gochar.ts`, and five derived facts: Sade Sati / dhaiya / a
+   plain Saturn transit (exactly one per chart), Jupiter's transit, the
+   Rahu–Ketu axis, and Saturn or Jupiter over a specific house. All of it is
+   counted from the natal Moon, which is why `user_103` — no birth time, houses
+   suppressed — still gets a correct Sade Sati reading while "Saturn over your
+   6th house" is never built for that chart.
+
+   Two things the golden eval found on the first run, both fixed: promoting
+   `derived.transit.*` by wildcard lifted "Jupiter over the 4th house" into a
+   career answer, and *"Is Sade Sati affecting me?"* dropped the one fact that
+   answers it to a token tie-break. The second led to a third question-text
+   signal, **focus** (the planet a question names), and the first to a rule
+   that a promotion lifts a fact *to* primary weight, never past it. Selection
+   pass rate 88.5% → 94.1% on 34 cases; every transit statement ends *"a
+   climate, not a verdict"*.
 4. ~~**A debug console.**~~ **Built** — [`GET /console`](#get-console), one
    self-contained page with no framework, no build step and no CDN, rendering
    the whole decision: selected and excluded context with scores and reasons,

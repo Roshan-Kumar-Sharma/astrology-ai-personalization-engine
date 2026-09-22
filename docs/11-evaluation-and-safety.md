@@ -23,6 +23,7 @@ the measurement move, change it back.
 - [Feature 4 — The LLM intent fallback](#feature-4--the-llm-intent-fallback)
 - [Feature 5 — The LLM safety second layer](#feature-5--the-llm-safety-second-layer)
 - [Feature 6 — The debug console](#feature-6--the-debug-console)
+- [Feature 7 — Transits (gochar) and Sade Sati](#feature-7--transits-gochar-and-sade-sati)
 - [The tools you now have](#the-tools-you-now-have)
 - [If you are asked about this in an interview](#if-you-are-asked-about-this-in-an-interview)
 
@@ -1240,6 +1241,333 @@ nothing.
 
 ---
 
+# Feature 7 — Transits (gochar) and Sade Sati
+
+The natal chart says what a person *is*; the dasha says which chapter they are
+in. Neither says what the sky is doing to that chart **right now** — and "is my
+Sade Sati over?" is the question Indian users ask most. Until this feature the
+engine could not answer it, and the README listed it as the largest missing
+piece of the domain model.
+
+This added a fifth upstream (`transit`), a pure arithmetic module
+(`gochar.ts`), five derived facts, their placement in every intent × horizon
+rule, a third question-text signal (**focus** — the planet a question names),
+and one correction to the selector's scoring that the transits exposed. No
+model, no tokens: the whole thing is deterministic and lives inside the golden
+eval.
+
+## Concepts
+
+### Gochar, and why only the slow movers
+
+Only Saturn (~2.5 years a sign), Jupiter (~1 year) and Rahu/Ketu (~1.5 years)
+are modelled. Faster planets change sign within days or weeks; that rhythm is
+the panchang's, and the nakshatra already *is* the Moon's position. The slow
+transits are the ones that can characterise a month, a quarter or a year —
+exactly the horizon band where the panchang has nothing to say. So in the
+rules they move in **opposite directions** as the horizon widens: the almanac
+is dropped at `quarter`, the gochar is promoted there. What one loses, the
+other gains. (See [Astrology Concepts §Gochar](07-astrology-concepts.md#gochar--transits-and-sade-sati)
+for the domain itself and the arithmetic.)
+
+### Moon-relative versus lagna-relative — reliability, reused
+
+Classical gochar counts a transit **from the natal Moon sign**. For this engine
+that is the load-bearing property: the Moon sign survives a birth time that is
+wrong by hours, so every Moon-relative fact stays sound for a user whose houses
+were suppressed. "Saturn over your 6th house" needs the lagna, and is never
+built for such a chart.
+
+```ts
+if (transits) {
+  facts.push(...this.transitFromMoonFacts(kundli, transits));                       // always
+  if (reliability.housesUsable) facts.push(...this.transitOverHouseFacts(kundli, transits));  // gated
+}
+```
+
+`user_103` — Aquarius Moon, unknown birth time, six house items suppressed —
+gets a correct Sade Sati reading. Same sky, two kinds of fact, one of them
+sound. This is the reliability design from decision 3 doing new work without
+being changed.
+
+### Mean motion, and saying so
+
+The mock propagates positions from a reference epoch by mean daily motion —
+Saturn 0.03347°/day, Jupiter 0.08309°/day, Rahu −0.05295°/day (the nodes move
+backwards). No retrograde loops. What it preserves is the thing the engine
+reasons about (which sign, roughly how far through); what it loses is the
+degree fidelity nobody should cite from a mock anyway. It is labelled a
+stand-in in the same words the panchang mock uses — and it lets the sky move,
+which is what Experiment 24 needs.
+
+### Focus — the third signal from the question
+
+Intent says what area of life; horizon says over what window; neither can see
+that *"Is Sade Sati affecting me?"* is a question **about Saturn**. `focus` is
+a third extractor in the shape of the horizon one: deterministic patterns
+(English, Hinglish, Devanagari), a named result, and a scoring adjustment that
+appears in the ledger with its reason. It never changes intent.
+
+### A promotion lifts *to* primary weight, never past it
+
+Found by this feature, and worth stating as a rule: the facts an intent names
+as primary are the ones that answer the question. A horizon or a named planet
+may add to them; it must not bury them. So a promoted secondary item is capped
+at primary weight (100) and ties are broken by token cost, as before. The
+arithmetic that survives is the interesting one: a Saturn fact at a `today`
+horizon when the question names Saturn scores `55 − 45 + 60 = 70` — demoted,
+promoted, under the cap, above the floor, with all three reasons in the ledger.
+
+---
+
+## Issues hit, and how they were resolved
+
+### Issue 1 — The golden eval failed on the first run, and it was right
+
+The first time the transits ran through the eval:
+
+```
+cases passed        88.5%   (23/26)
+  [sel-15] "How is my career this year?"   (user_102, free tier)
+      - missing "horoscope.career" (excluded as budget)
+```
+
+The trace showed two defects at once:
+
+```
+SEL  115  58tok derived.transit.jupiter
+SEL  115  66tok derived.transit.saturn
+SEL  115  73tok derived.transit.nodes
+SEL  100  30tok derived.house.10
+SEL  100  52tok derived.dasha.position
+SEL   75  37tok derived.transit.jupiter.house.4      <- background, promoted over the floor
+EXC budget                horoscope.career
+```
+
+First, `promote: ['derived.transit.*']` also matched the **house-relative**
+facts, and +60 lifts a neutral item (15) to 75 — past the relevance floor of
+30. A year-horizon career question was sending "Jupiter over the 4th house",
+which has nothing to do with career. Promotion may re-rank what a rule admits;
+it must not admit what the rule left out. The promote list now names the four
+Moon-relative facts, and a selector test pins the 4th-house case.
+
+Second, the three transit statements cost **197 tokens between them — 62% of
+a free-tier budget**. Rewritten tersely: 47 + 53 + ~50. `horoscope.career` came
+back, and the eval rose to 24/26 with reason accuracy at 100%.
+
+### Issue 2 — The question that names the answer dropped the answer
+
+Verifying candidate eval labels before writing them down:
+
+```
+Is Sade Sati affecting me? [user_102] general/unspecified  used 320/320
+   SEL derived.transit.jupiter@55 derived.transit.nodes@55
+   EXC derived.transit.saturn[budget]
+```
+
+`user_102` is *not* in Sade Sati (Saturn is 11th from a Taurus Moon), so the
+honest answer is Saturn's actual position — and that was the one fact dropped.
+Three secondary transits tied at 55, the tie went to the cheapest, and Saturn's
+was 53 tokens against Jupiter's 47. Intent (`general`) and horizon
+(`unspecified`) had nothing to offer. This is what the focus extractor is for:
+naming Saturn now promotes Saturn's facts, and the case is `sel-30`.
+
+### Issue 3 — Promotion outranked the primaries
+
+With transits promoted at a `quarter` horizon, the brief's own flagship
+question changed its lead:
+
+```
+Received: ["Saturn Transit", "Jupiter Transit", "Career Horoscope", "10th House"]
+```
+
+`55 + 60 = 115` put a secondary fact above every primary, so Saturn's transit
+led the prompt ahead of the dasha transition — which decision 2 argues is the
+actual answer to "should I change my job in the next few months". The
+`HorizonOverride` comment had always said *"raise to primary weight"*; the
+implementation had never enforced it. It does now, and the comments were
+rewritten to say what the code does rather than what it was meant to.
+
+### Issue 4 — A test that asserted a tie-break as a contract
+
+After the cap, four primaries tie at 100 and the cheaper ones win, so the mock
+provider's four citations now include "Dasha Lord Rulership" rather than
+"Current Dasha". The e2e test asserting the brief's example had been pinning
+*which* dasha item the mock happened to cite. It now asserts what is actually
+contractual: the career sources lead, and the answer rests on the dasha in some
+form.
+
+### Issue 5 — Two small ones that are worth remembering
+
+- `ids.some((id) => id.includes('transit'))` was true with the transit service
+  dead. `derived.dasha.transition` contains "transit". The predicate is now
+  `/^(derived\.)?transit\./`.
+- The e2e suite pins every `UPSTREAM_*_URL` to its own port, and I did not add
+  the new one. `transit` fell through to the default `:4010` — where the dev
+  server I had started *before* the route existed answered 404, so the new
+  source reported `failed` in six tests at once. A stale process made new code
+  look broken; the same lesson as the stale `dist/` build in Feature 2.
+
+---
+
+## Decisions made
+
+1. **A fifth upstream, not a bigger panchang.** Real ephemeris/transit services
+   are separate from almanac services, and the README had already said "it
+   needs a transit service". Cost: every seam that enumerates sources — the
+   `UpstreamName` union, `ContextBundle`, `bundleResults`, the TTL switch, the
+   criticality weights, the fan-out, the naive baseline, the eval harness, the
+   e2e env — had to change. TypeScript found most of them; the e2e env was the
+   one it could not.
+2. **Only four bodies, and only sign + degree.** No speed, no retrograde
+   flag (optional in the type, never sent by the mock), no aspects. The engine
+   uses the degree for one thing: how far through the sign.
+3. **Criticality 0.10 for transits**, taken from kundli (0.45 → 0.40) and
+   horoscope (0.30 → 0.25). Transits colour an answer rather than carry it;
+   losing them costs what losing the panchang does. Weights still sum to 1.
+4. **Exactly one Saturn fact per chart** — Sade Sati, dhaiya, or plain — never
+   two. And every transit statement ends *"a climate, not a verdict"*: the
+   safety constraints say the same thing in the prompt, but the fact says it
+   first, so the model is never handed a raw "bad period" to soften.
+5. **Transits are demoted at `today` and at `lifetime`, promoted at `quarter`
+   and `year`, neutral between.** A 2.5-year transit cannot resolve to a day,
+   and it is a current condition rather than a life pattern. The gradient is in
+   every intent's overrides with a `why`.
+6. **Focus promotes, never reclassifies.** Cost: one more extractor to keep
+   honest, and one more false-positive list ("guru ji", "shanivar").
+7. **The cap.** A behaviour change for every existing promotion of a secondary
+   item, accepted because the eval showed it changed *ordering*, not
+   *admissibility*: the selection pass rate was identical with and without it.
+
+---
+
+## What it bought
+
+| | before | after |
+|---|---|---|
+| selection cases | 26 | 34 |
+| selection pass rate | 88.5% (23/26) | **94.1%** (32/34) |
+| exclusion-reason accuracy | 90.0% | **100%** |
+| include recall / exclude accuracy | 95.6% / 95.7% | 96.4% / 96.7% |
+| intent cases / accuracy | 120 / 73.3% | 124 / 74.2% |
+| tests | 250 | **284** |
+
+The two remaining selection failures are the same two that fail on purpose
+(`sel-23`, `sel-24`). The reason-accuracy jump is incidental and honest:
+`sel-19` ("Will I ever get promoted?") had been failing since it was written
+because the `general` intent had no `lifetime` override, so the panchang fell
+below threshold instead of being dropped by rule. Giving `general` a lifetime
+override for the transits fixed it as a side effect.
+
+**Token accounting, re-measured** (`npm run demo`, six sample questions,
+`user_101`):
+
+```
+                      sent   candidates   raw JSON dump
+before transits       1541      3564          1380
+after transits        2057      4914          1674
+```
+
+Sent context grew by ~86 tokens a question — the transits — and the prompt is
+now 23% larger than a raw dump of all five payloads, up from 12%. The README's
+position does not change: this engine does not win by sending fewer tokens, it
+wins by sending different ones. The honest addition is that the gap widened,
+and this document says so.
+
+---
+
+## Experiments
+
+### Experiment 23 — Same chart, two transits, one sound
+
+```bash
+npm start
+```
+
+Open <http://localhost:3000/console>, click **Sade Sati · unknown birth time**.
+In the ledger: `Sade Sati` selected at 160 (primary, plus "promoted: the
+question names Saturn"), and in the excluded column `reliability (6)` —
+Ascendant, 1st, 6th, 7th, 10th, 11th House. Nothing house-relative for Saturn
+or Jupiter exists at all for this chart. Now switch the picker to `user_101`
+and re-run: `Saturn over 6th House` and `Jupiter over 10th House` appear,
+because the lagna is usable.
+
+### Experiment 24 — Move the sky and watch Sade Sati end
+
+The mock's positions are propagated by mean motion, so a date is enough:
+
+```bash
+curl -s 'http://127.0.0.1:4010/transits?date=2028-09-15'
+```
+
+Saturn has crossed into Aries. Through the engine (the harness takes a date):
+
+```
+2026-09-15  Saturn Pisces 7.0°   derived.transit.sade_sati
+   Sade Sati, setting (third) phase … About 23% into this phase (~23 months left); ~74% through the 7.5-year cycle.
+2027-09-15  Saturn Pisces 19.2°  derived.transit.sade_sati
+   … About 64% into this phase (~11 months left); ~88% through the 7.5-year cycle.
+2028-09-15  Saturn Aries 1.5°    derived.transit.saturn
+   Saturn transits Aries, 3rd from the natal Moon (Aquarius) - classically a supportive position (3rd/6th/11th) …
+```
+
+Reproduce with `bundleFor('user_103', '2028-09-15')` from `eval/harness.ts`.
+The id changes from `sade_sati` to `saturn` — exactly one Saturn fact, always.
+
+### Experiment 25 — Break the cap and watch two tests name it
+
+In `context.selector.ts`, delete the four-line block that begins
+`if (tier !== 'primary' && score > TIER_WEIGHTS.primary)`, then:
+
+```bash
+npx jest src/personalization/context.selector.spec.ts
+```
+
+```
+✕ never promotes a secondary item past primary weight
+✕ promotes the facts about a planet the question names
+```
+
+Put it back. Then read the prompt order for the brief's flagship question with
+the cap in place: seven items tie at 100 and the career horoscope, at 15
+tokens, leads.
+
+### Experiment 26 — Name the planet, watch the tie-break lose
+
+```bash
+curl -s -X POST localhost:3000/debug/personalization -H 'content-type: application/json' \
+  -d '{"userId":"user_102","question":"How are things?"}' | jq '.explain.selected[] | select(.id | test("transit")) | {id,score}'
+curl -s -X POST localhost:3000/debug/personalization -H 'content-type: application/json' \
+  -d '{"userId":"user_102","question":"Is Sade Sati affecting me?"}' | jq '.explain.focus, (.explain.selected[] | select(.id | test("transit")) | {id,score,why})'
+```
+
+Without the name, `derived.transit.saturn` is missing (budget). With it:
+`"focus": ["Saturn"]`, the fact is selected at 100, and `why` ends with
+*"promoted: the question names Saturn; capped at primary weight"*. Then try
+`"Guru ji, should I change my job?"` — `focus` is `[]`.
+
+### Experiment 27 — Lose the transit service and keep the answer
+
+```bash
+UPSTREAM_TRANSIT_URL=http://127.0.0.1:1 npm start
+```
+
+Port 1 refuses immediately. Any question still returns 200; the debug payload
+shows `upstream.transit.outcome: "failed"`, `dataCompleteness` at `0.9` with
+the note `transit:failed`, no transit facts, and the natal chart and dasha
+carrying the answer. That is criticality 0.10 doing what it was set to do.
+
+### Experiment 28 — The eval before and after, in one command
+
+```bash
+git stash && npm run eval | grep -A6 'Context selection'; git stash pop && npm run eval | grep -A6 'Context selection'
+```
+
+Twenty-six cases at 88.5% with reason accuracy 90%, then thirty-four at 94.1%
+with 100%. The interesting line is the one that *changed sides*: `sel-19`.
+
+---
+
 # The tools you now have
 
 ### `npm run eval`
@@ -1302,7 +1630,7 @@ you can see it happening.
 
 # If you are asked about this in an interview
 
-Eight questions you should be able to answer cold.
+Nine questions you should be able to answer cold.
 
 **1. "Your safety layer reports 100%. How much do you trust that?"**
 Not much, and say so first. It is 100% against patterns tuned until it passed. A
@@ -1349,10 +1677,19 @@ question never reaches the fan-out in production, though the debug endpoint runs
 the plan anyway — the page says so in prose rather than letting a true set of
 numbers imply something false.
 
-**8. "What would you do next?"**
+**8. "Sade Sati for a user with no birth time — how is that sound?"**
+Because classical gochar counts from the natal Moon sign, not the lagna, and
+the Moon sign survives a birth time that is wrong by hours. The engine builds
+the Moon-relative facts unconditionally and the house-relative ones only when
+houses are usable — the same reliability gate as decision 3, doing new work
+unchanged. Then the sharper follow-up: the transit *positions* come from a
+mock propagated by mean motion, so the degree is approximate and every
+"months left" figure is worded as an estimate. Don't quote the degree.
+
+**9. "What would you do next?"**
 Measure `SAFETY_LLM_SCREEN` on real quota, false-positive column first — it is
 the one feature here that ships unmeasured, and `npm run eval:safety-llm`
-refuses to report a lift when the calls are not landing. After that: transits
-(gochar), which is the largest missing piece of the domain model, and an
+refuses to report a lift when the calls are not landing. After that: an
 LLM-as-judge pass on answer quality, which is the only dimension the golden eval
-does not touch at all.
+does not touch at all; and remedies (upay), which are the natural next domain
+step now that the engine knows a Saturn transit is running.

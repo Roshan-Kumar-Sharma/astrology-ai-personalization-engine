@@ -33,6 +33,8 @@ export interface ConsolePreset {
     housesUsed?: boolean;
     /** Whether any panchang limb was selected. */
     panchangUsed?: boolean;
+    /** Item ids that must appear in `explain.selected`. */
+    selects?: string[];
   };
 }
 
@@ -108,6 +110,19 @@ export const CONSOLE_PRESETS: ConsolePreset[] = [
     demonstrates:
       'No lexical signal at all: intent falls back to "general" at confidence 0.30, which is exactly the region the LLM fallback escalates.',
     expect: { intent: 'general', blocked: false },
+  },
+  {
+    label: 'Sade Sati · unknown birth time',
+    userId: 'user_103',
+    question: 'Is my Sade Sati over?',
+    demonstrates:
+      'The question Indian users ask most, from a user whose birth time is unknown. Sade Sati is counted from the Moon sign, so it survives; "Saturn over your 6th house" needs the lagna, so it is never built. Same chart, two transits, one sound.',
+    expect: {
+      intent: 'general',
+      blocked: false,
+      housesUsed: false,
+      selects: ['derived.transit.sade_sati'],
+    },
   },
   {
     label: 'Marathi · premium',

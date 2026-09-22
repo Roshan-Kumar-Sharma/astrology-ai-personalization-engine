@@ -8,7 +8,7 @@ import { ContextItem } from './types';
  * Flattens everything we know into a flat list of atomic, individually
  * selectable context items.
  *
- * The flattening is the point. Upstream data arrives as four nested documents,
+ * The flattening is the point. Upstream data arrives as five nested documents,
  * but selection has to happen at the granularity of *one fact* - the 10th house
  * is relevant to a career question while the 7th house in the same document is
  * not. Keeping the documents whole forces an all-or-nothing choice and is the
@@ -21,6 +21,7 @@ export class ContextItemBuilder {
       ...this.fromKundli(bundle),
       ...this.fromHoroscope(bundle),
       ...this.fromPanchang(bundle),
+      ...this.fromTransits(bundle),
       ...this.fromDerived(derived),
     ];
   }
@@ -162,6 +163,39 @@ export class ContextItemBuilder {
       );
   }
 
+  /**
+   * The raw positions, one item per planet.
+   *
+   * On their own these are the least personal facts in the bundle - every user
+   * on Earth shares them - and the derived transit facts supersede them
+   * whenever a Moon sign is available to count from. They still earn a place
+   * for the degraded case: with no kundli at all, "Saturn is in Pisces" is
+   * still true and still worth more than nothing.
+   */
+  private fromTransits(bundle: ContextBundle): ContextItem[] {
+    const res = bundle.transit;
+    const t = res.data;
+    if (!t?.positions) return [];
+    const meta = sourceMeta(res);
+
+    return (['Saturn', 'Jupiter', 'Rahu', 'Ketu'] as const)
+      .filter((planet) => t.positions[planet]?.sign)
+      .map((planet) => {
+        const p = t.positions[planet];
+        return item({
+          id: `transit.${planet.toLowerCase()}`,
+          label: `${planet} Position`,
+          displayGroup: 'Current Transits',
+          source: 'transit',
+          categories: ['timing', 'general'],
+          text: `${planet} is currently in ${p.sign} (${Math.round(p.degree)}\u00b0)${p.retrograde ? ', retrograde' : ''}.`,
+          confidence: 'high',
+          basis: [`transit.${planet}`],
+          ...meta,
+        });
+      });
+  }
+
   private fromDerived(derived: DerivedFact[]): ContextItem[] {
     return derived.map((f) =>
       item({
@@ -200,6 +234,16 @@ function supersededBy(derivedId: string): string[] {
       return ['kundli.moonSign'];
     case 'derived.panchang.resonance':
       return ['panchang.nakshatra'];
+    // Each Moon-relative transit fact restates the raw position it was counted
+    // from, plus what it means for this chart.
+    case 'derived.transit.sade_sati':
+    case 'derived.transit.dhaiya':
+    case 'derived.transit.saturn':
+      return ['transit.saturn'];
+    case 'derived.transit.jupiter':
+      return ['transit.jupiter'];
+    case 'derived.transit.nodes':
+      return ['transit.rahu', 'transit.ketu'];
     default:
       return [];
   }

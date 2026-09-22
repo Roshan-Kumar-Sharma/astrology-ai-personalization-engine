@@ -1,7 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { ChartReliability } from '../astrology/types';
+import { Planet } from '../astrology/zodiac';
 import {
   CONFIDENCE_MULTIPLIER,
+  FOCUS_ADJUSTMENT,
+  FOCUS_PROMOTE,
+  GOCHAR_PROMOTE,
   HORIZON_ADJUSTMENTS,
   INTENT_RULES,
   matchesAny,
@@ -18,6 +22,10 @@ export interface SelectionInput {
   horizon: Horizon;
   tokenBudget: number;
   reliability: ChartReliability;
+  /** Planets named in the question. Optional so existing callers are unchanged. */
+  focus?: Planet[];
+  /** "Gochar"/"transit" named without a planet. */
+  gochar?: boolean;
 }
 
 export interface SelectionResult {
@@ -45,6 +53,8 @@ export interface SelectionResult {
 export class ContextSelector {
   select(input: SelectionInput): SelectionResult {
     const { items, intent, secondaryIntents, horizon, tokenBudget, reliability } = input;
+    const focus = input.focus ?? [];
+    const gochar = input.gochar ?? false;
     const rule = INTENT_RULES[intent];
     const override = rule.horizonOverrides?.[horizon];
     const excluded: ExcludedItem[] = [];
@@ -135,7 +145,7 @@ export class ContextSelector {
 
     // --- 5. Scoring ----------------------------------------------------------
     const scored: ScoredItem[] = candidates.map((i) =>
-      this.score(i, { rule, secondaryIntents, override }),
+      this.score(i, { rule, secondaryIntents, override, focus, gochar }),
     );
 
     // --- 6. Relevance floor ---------------------------------------------------
@@ -201,9 +211,11 @@ export class ContextSelector {
       rule: (typeof INTENT_RULES)[Intent];
       secondaryIntents: Intent[];
       override?: { promote?: string[]; demote?: string[] };
+      focus: Planet[];
+      gochar: boolean;
     },
   ): ScoredItem {
-    const { rule, secondaryIntents, override } = ctx;
+    const { rule, secondaryIntents, override, focus, gochar } = ctx;
     const reasons: string[] = [];
 
     let tier: ScoredItem['tier'] = 'neutral';
@@ -237,6 +249,29 @@ export class ContextSelector {
     if (override?.demote && matchesAny(item.id, override.demote)) {
       score += HORIZON_ADJUSTMENTS.demote;
       reasons.push('demoted for this time horizon');
+    }
+
+    // A planet named in the question outranks anything a life-area rule can
+    // infer. Applied once, whichever planet matched first.
+    const named = focus.find((p) => matchesAny(item.id, FOCUS_PROMOTE[p] ?? []));
+    if (named) {
+      score += FOCUS_ADJUSTMENT;
+      reasons.push(`promoted: the question names ${named}`);
+    } else if (gochar && matchesAny(item.id, GOCHAR_PROMOTE)) {
+      score += FOCUS_ADJUSTMENT;
+      reasons.push('promoted: the question asks about transits');
+    }
+
+    // A promotion may lift a secondary or background item *to* primary weight,
+    // never past it. The facts an intent names as primary are the ones that
+    // answer the question; a horizon or a named planet can add to them but
+    // must not bury them. Without this, promoting the Saturn transit at a
+    // quarter horizon (55 + 60 = 115) pushed the dasha transition - the actual
+    // answer to "should I change my job in the next few months" - out of the
+    // lead of the prompt.
+    if (tier !== 'primary' && score > TIER_WEIGHTS.primary) {
+      score = TIER_WEIGHTS.primary;
+      reasons.push('capped at primary weight');
     }
 
     const confMultiplier = CONFIDENCE_MULTIPLIER[item.confidence];

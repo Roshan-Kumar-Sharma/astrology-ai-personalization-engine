@@ -89,6 +89,8 @@ export class DebugController {
             rule.horizonOverrides?.[plan.horizon]?.why ??
             'No horizon-specific adjustment applies to this intent.',
         },
+        /** Planets the question named; their transit facts were promoted. */
+        focus: plan.focus,
         responseStyle: plan.style,
         chartReliability: plan.reliability,
         selected: plan.selected.map((i) => ({

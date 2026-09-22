@@ -7,7 +7,7 @@ consider changing my job in the next few months?"* — and expects a personal
 answer based on their actual birth chart, in their language, in a tone that
 suits them.
 
-Behind that sit four backend services that return structured data:
+Behind that sit four backend services from the brief, plus a transit service added later, that return structured data:
 
 | Service | Returns | Changes |
 |---------|---------|---------|
@@ -15,6 +15,7 @@ Behind that sit four backend services that return structured data:
 | **Kundli** | ascendant, moon sign, current planetary period, house data | chart is fixed at birth; the period pointer moves |
 | **Horoscope** | four one-line daily readings (career/finance/health/relationship) | daily |
 | **Panchang** | the day's almanac: tithi, nakshatra, yoga, karana | daily, at sunrise |
+| **Transit** | where Saturn, Jupiter, Rahu and Ketu are in the sky right now | slowly; a sign change every 1–2.5 years |
 
 And in front sits an LLM that writes prose.
 
@@ -95,7 +96,7 @@ testing.
   drives the debug endpoint and renders the whole decision. Free to run.
 - **`GET /health`** — liveness and cache stats.
 
-Plus a bundled mock of the four upstream services over real HTTP, so the whole
+Plus a bundled mock of all five upstream services over real HTTP, so the whole
 system runs with `npm install && npm start` and no configuration.
 
 ## Scale of the thing

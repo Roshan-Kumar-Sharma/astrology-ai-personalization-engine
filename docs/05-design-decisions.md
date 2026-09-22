@@ -268,7 +268,7 @@ asserted (it was: Hindi and Hinglish both confirmed).
 |---|---|---|
 | Auth / rate limiting | Out of scope for the brief; would be theatre without a real identity provider | README "production concerns" |
 | Eval harness | The highest-value gap. Needs ~200 labelled questions to be meaningful, which exceeds the time budget | README "another day" |
-| Transits (gochar) | The biggest missing astrological signal — Saturn over the 10th house is *the* career-change trigger. Not derivable from the four given services | [Astrology Concepts](07-astrology-concepts.md) |
+| ~~Transits (gochar)~~ | **Built** (2026-09-22) as a fifth upstream plus `gochar.ts`. Counted from the Moon, so Sade Sati survives an unknown birth time | [Astrology Concepts](07-astrology-concepts.md#gochar--transits-and-sade-sati) |
 | Streaming | A consumer chat UI wants tokens streamed; the contract returns a whole answer | README |
 | Conversation memory | No thread id in the contract | D8 |
 
